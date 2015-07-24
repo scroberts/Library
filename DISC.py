@@ -46,7 +46,7 @@ def get_postentry_author_info( entry ):
 
     # Format it as a string
     # time format: 02/11/15 11:18 AM
-    dt = datetime.strptime(dt, "%m/%d/%y %H:%M %p")
+    dt = datetime.strptime(dt, "%m/%d/%y %I:%M %p")
     
     ent = entry.find("div", class_ = "postentry_header").find("a")
     url = 'https://docushare.tmt.org/' + ent.attrs["href"]
