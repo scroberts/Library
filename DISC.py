@@ -4,6 +4,7 @@
 
 # External modules
 import requests
+import string
 import openpyxl
 from bs4 import BeautifulSoup
 from openpyxl.styles import Font, Style, Alignment
@@ -20,6 +21,66 @@ font_url_style = Font(color = BLUE, underline = 'single')
 bold_style = Font(bold = True)
 align_hv_cen_style = Alignment(horizontal = 'center', vertical = 'center')
 align_ver_cen_style = Alignment(vertical = 'center')
+
+def get_bb_prop(s, handle):
+    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml","Depth":"0"}
+    xml = """<?xml version="1.0" ?>
+        <propfind>
+          <prop>
+            <title/><description/><keywords/>
+          </prop>
+        </propfind>"""
+    r = s.post(url,data=xml,headers=headers) 
+    r.raise_for_status()
+#     print('Status code:', r.status_code) 
+    
+    # Retrieve the results
+    dom = BeautifulSoup(r.text)
+    title = dom.title.text.strip()
+    keywords = dom.keywords.text.strip()
+    
+    # Have to further process the description
+    dom = BeautifulSoup(dom.description.text)
+    description = ''
+    for string in dom.strings:
+        description = description.strip() + ' ' + string.strip()
+    description = clean_string(description.strip())
+
+#     print('title:', title)
+#     print('description:', description)
+#     print('keywords:', keywords)
+    return([title, description, keywords])
+
+def set_bb_prop(s, title, description, keywords, handle):
+    url = cf.dcc_url + "/dsweb/PROPPATCH/" + handle
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+    xml = """<?xml version="1.0" ?>
+        <propertyupdate>
+          <set><prop>
+            <title><![CDATA[""" + title  + """]]></title>
+            <description><![CDATA[""" + description  + """]]></description>
+            <keywords><![CDATA[""" + keywords  + """]]></keywords>
+          </prop></set>
+        </propertyupdate>"""
+    r = s.post(url,data=xml,headers=headers) 
+    r.raise_for_status()
+#     print('Status code:', r.status_code)
+    
+def create_bb_post(s, title, description, keywords, handle):
+    url = cf.dcc_url + "/dsweb/MKRES/" + handle + "/Bulletin"
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+    xml = """<?xml version="1.0" ?>
+        <propertyupdate>
+          <set><prop>
+            <title><![CDATA[""" + title  + """]]></title>
+            <description><![CDATA[""" + description  + """]]></description>
+            <keywords><![CDATA[""" + keywords  + """]]></keywords>
+          </prop></set>
+        </propertyupdate>"""
+    r = s.post(url,data=xml,headers=headers) 
+    r.raise_for_status()
+#     print('Status code:', r.status_code)
 
 def clean_string(str):
     # Split text on newlines and add them to the list
