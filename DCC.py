@@ -20,8 +20,15 @@ import config as cf
 
 
 def login(url):
-    uname = input("Enter TMT Docushare Username:")
-    pword = getpass.getpass()
+    # See if secrets file exists and if so use credentials from there
+    try:
+        import secrets
+        uname = secrets.pw['DCC']['login']
+        pword = secrets.pw['DCC']['password']
+    except:
+        uname = input("Enter TMT Docushare Username:")
+        pword = getpass.getpass()
+        
     dname = "DocuShare"
     xml="""<?xml version='1.0' ?><authorization> <username>""" \
     + uname + """</username><password><![CDATA[""" \
@@ -29,15 +36,17 @@ def login(url):
     + dname + """</domain></authorization>"""
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     s = requests.Session()
-    r = s.post(url,data=xml,headers=headers)
-    r.raise_for_status()
-    print('Status code:', r.status_code)
-    if r.status_code != 200:
-        print("Status Code:", r.status_code)
+    try:
+        r = s.post(url,data=xml,headers=headers)
+        r.raise_for_status()
+        print('Status code:', r.status_code)
+    except:
         print("Unable to log in")
-        print('headers:\n', r.headers)
-        print('request headers:\n',r.request.headers)
+        print("Status Code:", r.status_code)
+#         print('headers:\n', r.headers)
+#         print('request headers:\n',r.request.headers)
         exit(0)
+        
     c = s.cookies
     # print('Cookies:\n', c)
     return s

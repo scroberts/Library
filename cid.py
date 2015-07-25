@@ -293,7 +293,7 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
     get_url_word.get_url_word(dirpath + outroot, dirpath + htmlfile)  
 
     # Login to DCC
-    s = DCC.login(cf.dcc_url + dcc_login)
+    s = DCC.login(cf.dcc_url + cf.dcc_login)
 
     json_handlelist = dirpath + outroot + 'bothlist.txt'
     json_ssdata = dirpath + outroot + 'CID.txt'

@@ -2,12 +2,17 @@
 
 # reference: http://www.crummy.com/software/BeautifulSoup/bs4/doc/
 
+# External modules
 import requests
 import openpyxl
 from bs4 import BeautifulSoup
 from openpyxl.styles import Font, Style, Alignment
 from openpyxl.styles.colors import BLUE
 from datetime import datetime
+
+# My modules
+import config as cf
+import DCC
 
 # Set Excel Styles
 # Excel hyperlink style is calibri 11, underline blue
@@ -111,15 +116,19 @@ def set_ss_headings(ws):
     for col in range(1, colmax):
         ws.cell(row = 1, column = col).font = bold_style
         
-def get_discussion(htmlfile,xlfile):
+def get_discussion(url, htmlfile, xlfile):
+    # Login to DCC and save the discussion as an html file
+    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    res = s.get(url)
+    res.raise_for_status()
+
+    webfile = open(cf.dccfilepath + htmlfile,'wb')
+    for chunk in res.iter_content(100000):
+        webfile.write(chunk)
+    webfile.close
+
     # Get the HTML into the Beautiful Soup object
-    # res = requests.get('https://docushare.tmt.org/docushare/dsweb/View/BulletinBoard-280?init=true')# res = requests.get('https://docushare.tmt.org/docushare/dsweb/View/BulletinBoard-280?init=true', auth=('sroberts','TVow39%'))
-    # res.raise_for_status()
-    # dom = BeautifulSoup(res.text)
-
-
-    dcc=open(htmlfile,'r',encoding='utf-8').read()
-
+    dcc=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
     dom = BeautifulSoup(dcc, "html.parser")
 
     # Open the spreadsheet

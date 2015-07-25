@@ -20,15 +20,31 @@ import config as cf
 
 
 def tracetree_login():
-    s = requests.session()
-    uname = input("Enter TMT TraceTree Username:")
-    pword = getpass.getpass()
-    s.auth = (uname,pword)
+    # See if secrets file exists and if so use credentials from there
+    try:
+        import secrets
+        uname = secrets.pw['TT']['login']
+        pword = secrets.pw['TT']['password']
+    except:
+        uname = input("Enter TMT TraceTree Username:")
+        pword = getpass.getpass()
+
+    try:
+        s = requests.session()
+        s.auth = (uname,pword)
+    except:
+        print("Unable to log in")
+        exit(0)
+        
     return(s)
 
 def get_docmod_html_files(s):
-    res = s.get(cf.docs_url_main)
-    res.raise_for_status()
+    try:
+        res = s.get(cf.docs_url_main)
+        res.raise_for_status()
+    except:
+        print('Unable to get from TraceTree, check login credentials')
+        print('Status code:', res.status_code)
 
     webfile = open(cf.tracetreefilepath + 'document_module_main.html','wb')
     for chunk in res.iter_content(100000):
