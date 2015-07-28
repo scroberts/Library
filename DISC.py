@@ -5,10 +5,11 @@
 # External modules
 import requests
 import string
-import openpyxl
 from bs4 import BeautifulSoup
+import openpyxl
 from openpyxl.styles import Font, Style, Alignment
 from openpyxl.styles.colors import BLUE
+from openpyxl import load_workbook
 from datetime import datetime
 
 # My modules
@@ -127,57 +128,56 @@ def get_postentry_author_info( entry ):
     
     return([title, url, author, auth_url, dt, ent_str])
 
-def set_ss_headings(ws):
-
-    col = 1
-    ws.cell(row = 1, column = col).value = "ID"
-    ws.cell(row = 1, column = col).alignment = align_hv_cen_style 
-
-    col += 1
-    ws.cell(row = 1, column = col).value = "Title"
-    ws.cell(row = 1, column = col).alignment = align_ver_cen_style 
-
-    col += 1    
-    ws.cell(row = 1, column = col).value = "Posting"
-    ws.cell(row = 1, column = col).alignment = align_ver_cen_style 
-
-    col += 1    
-    ws.cell(row = 1, column = col).value = "Author"
-    ws.cell(row = 1, column = col).alignment = align_ver_cen_style
-
-    col += 1    
-    ws.cell(row = 1, column = col).value = "Post Date"
-    ws.cell(row = 1, column = col).alignment = align_hv_cen_style 
+def set_ss_headings(ws, rownum, col):
+    
+    ws.cell(row = rownum, column = col).value = "ID"
+    ws.cell(row = rownum, column = col).alignment = align_hv_cen_style 
 
     col += 1
-    ws.cell(row = 1, column = col).value = "# Replies"
-    ws.cell(row = 1, column = col).alignment = align_hv_cen_style 
+    ws.cell(row = rownum, column = col).value = "Title"
+    ws.cell(row = rownum, column = col).alignment = align_ver_cen_style 
 
     col += 1    
-    ws.cell(row = 1, column = col).value = "Replies By:"
-    ws.cell(row = 1, column = col).alignment = align_hv_cen_style
+    ws.cell(row = rownum, column = col).value = "Posting"
+    ws.cell(row = rownum, column = col).alignment = align_ver_cen_style 
+
+    col += 1    
+    ws.cell(row = rownum, column = col).value = "Author"
+    ws.cell(row = rownum, column = col).alignment = align_ver_cen_style
+
+    col += 1    
+    ws.cell(row = rownum, column = col).value = "Post Date"
+    ws.cell(row = rownum, column = col).alignment = align_hv_cen_style 
 
     col += 1
-    ws.cell(row = 1, column = col).value = "Latest Reply Date"
-    ws.cell(row = 1, column = col).alignment = align_hv_cen_style
+    ws.cell(row = rownum, column = col).value = "# Replies"
+    ws.cell(row = rownum, column = col).alignment = align_hv_cen_style 
+
+    col += 1    
+    ws.cell(row = rownum, column = col).value = "Replies By:"
+    ws.cell(row = rownum, column = col).alignment = align_hv_cen_style
+
+    col += 1
+    ws.cell(row = rownum, column = col).value = "Latest Reply Date"
+    ws.cell(row = rownum, column = col).alignment = align_hv_cen_style
 
     col += 1    	
-    ws.cell (row = 1, column = col).value = "Latest Reply"
-    ws.cell (row = 1, column = col).alignment = align_hv_cen_style
+    ws.cell (row = rownum, column = col).value = "Latest Reply"
+    ws.cell (row = rownum, column = col).alignment = align_hv_cen_style
     
     col += 1    	
-    ws.cell (row = 1, column = col).value = "Disposition"
-    ws.cell (row = 1, column = col).alignment = align_hv_cen_style
+    ws.cell (row = rownum, column = col).value = "Disposition"
+    ws.cell (row = rownum, column = col).alignment = align_hv_cen_style
     
     col += 1    	
-    ws.cell (row = 1, column = col).value = "Action"
-    ws.cell (row = 1, column = col).alignment = align_hv_cen_style
+    ws.cell (row = rownum, column = col).value = "Action"
+    ws.cell (row = rownum, column = col).alignment = align_hv_cen_style
 	
     colmax = col + 1
     for col in range(1, colmax):
-        ws.cell(row = 1, column = col).font = bold_style
+        ws.cell(row = rownum, column = col).font = bold_style
         
-def get_discussion(url, htmlfile, xlfile):
+def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
     # Login to DCC and save the discussion as an html file
     s = DCC.login(cf.dcc_url + cf.dcc_login)
     res = s.get(url)
@@ -193,21 +193,28 @@ def get_discussion(url, htmlfile, xlfile):
     dom = BeautifulSoup(dcc, "html.parser")
 
     # Open the spreadsheet
-    wb = openpyxl.Workbook()
+    try:
+        wb = load_workbook(xlfile)
+        print('Opened existing file :', xlfile)
+    except:
+        wb = openpyxl.Workbook()
+        print('Created new file :', xlfile)
+        
     ws = wb.worksheets[0]
-
+    
     # Write and format the headings in Excel
-    set_ss_headings(ws)
-
-    # Set the first row to write data to    
-    ssrow = 2
+    set_ss_headings(ws, ssrow, sscol)
 
     # Find the Parent of all the original posts (that may have replies)
     # This is <form name="ToolbarMulti" method="post" action="/docushare/dsweb/ProcessMultipleCommand">
 
     form_tag = dom.find("form", {"name":"ToolbarMulti"})       
 
+    rowoff = ssrow
+    ssrow = ssrow + 1
+
     # Now find all the children that are Post Entries
+
     for idx, postentry in enumerate(form_tag.find_all("div", class_ = "postentry", recursive = False)):
 
         [title, url, author, auth_url, dt, post] = get_postentry_author_info( postentry )
@@ -269,8 +276,8 @@ def get_discussion(url, htmlfile, xlfile):
             print('Action:', r_action)
 
         # Column 1: ID
-        col = 1
-        ws.cell(row = ssrow, column = col).value = ssrow-1
+        col = sscol
+        ws.cell(row = ssrow, column = col).value = ssrow-rowoff
         ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
 
         # Column 2: Title
@@ -347,9 +354,6 @@ def get_discussion(url, htmlfile, xlfile):
     wb.save(xlfile)
 
 
-
-    
-
-
-
+def get_discussion(url, htmlfile, xlfile):
+    get_discussion_rowcol(url, htmlfile, xlfile, 1, 1)
 
