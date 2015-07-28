@@ -39,7 +39,7 @@ def login(url):
     try:
         r = s.post(url,data=xml,headers=headers)
         r.raise_for_status()
-        print('Status code:', r.status_code)
+        print('Login status code:', r.status_code)
     except:
         print("Unable to log in")
         print("Status Code:", r.status_code)
@@ -59,7 +59,53 @@ def get_yn(question):
     if ans.upper() == 'Y':
         return True
     return False
-
+    
+def get_file(s, handle, targetpath, filename):
+    # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
+    url = cf.dcc_url + "/dsweb/GET/" + handle
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+    r = s.post(url,headers=headers) 
+    print(r.headers)
+    file = open(targetpath + filename,'wb')
+    for chunk in r.iter_content(100000):
+        file.write(chunk)
+    file.close
+    return(r) 
+    
+def get_basic_info(s, handle):
+    # Get the basic file information
+    # Note that handle returns a file- or rendition- that can be used to get the file
+    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+    xml = """<?xml version="1.0" ?>
+        <propfind>
+            <prop>
+                <title/><handle/><document/>
+            </prop>
+        </propfind>"""     
+    r = s.post(url,data=xml,headers=headers)     
+#     print(r.status_code)
+#     print(r.text)
+    
+#     file = open('test.xml','wb')
+#     for chunk in r.iter_content(100000):
+#         file.write(chunk)
+#     file.close
+#     
+    dom = BeautifulSoup(r.text)
+    # note that the first next_sibling is a whitespace character
+    # See http://www.crummy.com/software/BeautifulSoup/bs4/doc/#going-down
+    #   and search for 'you might think'
+    
+#     dom = dom.multistatus.response.next_sibling.next_sibling
+    title = dom.title.text
+    filename = dom.document.text
+    handle = dom.dsref['handle']
+#     print('handle = ', handle)
+    author = dom.author
+    info = {'title':title, 'handle':handle, 'filename':filename}
+    return(info)
+       
 def get_locations(s, handle):
     # Get all the locations for a document or a collection
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
