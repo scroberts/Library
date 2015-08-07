@@ -24,6 +24,14 @@ align_hv_cen_style = Alignment(horizontal = 'center', vertical = 'center')
 align_ver_cen_style = Alignment(vertical = 'center')
 
 def get_bb_prop(s, handle):
+# Get properties from a bulletin board entry
+# Inputs:
+#     s - requests session object
+#     handle - bb identifier string of the form 'bulletin-XXXX'
+# Returns:
+#     list containing title, description and keywords strings
+
+
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml","Depth":"0"}
     xml = """<?xml version="1.0" ?>
@@ -196,14 +204,17 @@ def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
     try:
         wb = load_workbook(xlfile)
         print('Opened existing file :', xlfile)
+        existing_doc = True
     except:
         wb = openpyxl.Workbook()
         print('Created new file :', xlfile)
+        existing_doc = False
         
     ws = wb.worksheets[0]
     
-    # Write and format the headings in Excel
+    # Write and format the headings in Excel if this is a new document
     set_ss_headings(ws, ssrow, sscol)
+    
 
     # Find the Parent of all the original posts (that may have replies)
     # This is <form name="ToolbarMulti" method="post" action="/docushare/dsweb/ProcessMultipleCommand">
