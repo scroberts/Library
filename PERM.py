@@ -58,18 +58,32 @@ def checkPerms(target, permissions):
     # Login to DCC
     s = DCC.login(cf.dcc_url + cf.dcc_login)
 
-    doclist = DCC.get_files_in_collection(s, target)
+    if 'Collection' in target:
+        docList = DCC.get_files_in_collection(s, target)
+        docList = DCC.get_collections_in_collection(s, target) + docList
+    else:
+        docList = [target]
     
     printCheckCriteria(target, permissions)
+    passList = []
+    failList = []
 
-    for doc in doclist:
-        dom = DCC.dom_prop_find(s, doc)
-        fd = DCC.read_dcc_doc_data(dom)
+    for doc in docList:
+        if 'Document' in doc:
+            dom = DCC.dom_prop_find(s, doc)
+            fd = DCC.read_dcc_doc_data(dom)
     
-        print("\n\n*** Document Entry", fd['dccnum'], "***\n")
-        print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")
-        print("TMT Document Number: ", fd['tmtnum'])
-        print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
+            print("\n\n*** Document Entry", fd['dccnum'], "***\n")
+            print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")
+            print("TMT Document Number: ", fd['tmtnum'])
+            print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
+        elif 'Collection' in doc:
+            dom = DCC.dom_prop_find_coll(s, doc)
+            fd = DCC.read_dcc_coll_data(dom)
+            print("\n\n*** Document Entry", fd['dccnum'], "***\n")
+            print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
+        else:
+            sys.exit('Error in checkPerms: not Document or Collection')
     
         OkayPerms = []
         for perm in sorted(fd["permissions"], key = lambda x: x["handle"]):
@@ -90,12 +104,14 @@ def checkPerms(target, permissions):
                         
         if permFlag == True:
             print("*** PERMISSIONS MEET CRITERIA ***")
+            passList.append(doc)
         else:
             print("!!! PERMISSIONS DO NOT MEET CRITERIA !!!")
+            failList.append(doc)
+            
+    return([passList,failList])
             
 def testPerm():
-
-
     # Define a list data structure of users or groups in sets that are
     # acceptable if they have read permission to the collections and files
     # The with the following logic: 
@@ -108,9 +124,9 @@ def testPerm():
     #     	permissions are considered okay)
 
     # Define the top level collection or document to check
-#     target = 'Collection-10071'
+    target = 'Collection-10071'
 #     target = 'Document-21380'
-    target = 'Collection-1318'
+#     target = 'Collection-1318'
     
     # Define users or groups that will be checked for permissions
     sys_eng_read = 'Group-325'
@@ -120,15 +136,20 @@ def testPerm():
     tc_user = 'User-1165'
     
     # Define the permissions
-#     permissions = [{tc_user : 'RWM'}]
-    permissions = [{sys_eng_read : 'R'},{se_group : 'RW', content_admin : 'RWM'}, {sr_user : 'RWM'}]
+    permissions = [{tc_user : 'RWM'}]
+#     permissions = [{sys_eng_read : 'R'},{se_group : 'RW', content_admin : 'RWM'}, {sr_user : 'RWM'}]
 
     # Call the checkPerms function
-    checkPerms(target, permissions)
+    [passList,failList] = checkPerms(target, permissions)
+    
+    print('\n\n')
+    print('List of docs that pass:', passList)
+    print('List of docs that fail:', failList)
             
 if __name__ == '__main__':
     print("Running module test code for",__file__)
     testPerm()
+
     
     
     

@@ -152,6 +152,25 @@ def get_files_in_collection(s, coll):
     fh.close()
     return doclist
 
+def prop_find_coll(s, target):
+    if 'Collection' in target:
+        url = cf.dcc_url + "/dsweb/PROPFIND/" + target
+        headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"0"}
+        r = s.post(url,headers=headers)     # Gets all data
+        return(r)
+    else:
+        sys.exit('Error: call to prop_find_collection without target collection')
+
+def dom_prop_find_coll(s, target):
+    r = prop_find_coll(s, target)
+    # Need to add flag to turn on / off writing to file
+    webfile = open(cf.dccfilepath + target+".html",'wb')
+    for chunk in r.iter_content(100000):
+        webfile.write(chunk)
+    webfile.close
+    dom = BeautifulSoup(r.text)
+    return dom
+
 def prop_find(s, target):
     # POST /dscgi/ds.py/PROPFIND/Collection-49 HTTP/1.1
     # Host: docushare.xerox.com
@@ -255,6 +274,34 @@ def download_html(url, cookies, outfile):
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
+
+def read_dcc_coll_data(dom):
+    fd = {}
+    fd['dccnum'] = get_handle(dom.acl['handle'])
+    fd['modified'] = dom.getlastmodified.text
+    fd['owner-name'] = dom.entityowner.displayname.text
+    fd['owner-username'] = dom.entityowner.username.text
+    fd['owner-userid'] = dom.entityowner.dsref['handle']
+    fd['date'] = dom.getlastmodified.text
+
+    # Permissions
+    perms = []
+    for p in dom.find_all("ace"):       
+        pentry = {}
+        pentry["handle"] = p.dsref.get('handle')
+        pentry["name"] = p.displayname.text
+        if p.searchers != None:
+            pentry["Search"] = True
+        if p.readers != None:
+            pentry["Read"] = True
+        if p.writers != None:
+            pentry["Write"] = True 
+        if p.managers != None:
+            pentry["Manage"] = True
+        perms.append(pentry)  
+
+    fd["permissions"] = perms
+    return(fd)
 
 def read_dcc_doc_data(dom):
     # fill in file data dictionary
