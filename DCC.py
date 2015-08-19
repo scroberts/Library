@@ -7,6 +7,10 @@ import re
 import requests
 import getpass
 import json
+import os
+import time
+import sys
+from datetime import datetime
 
 # my modules
 import config as cf
@@ -65,7 +69,7 @@ def get_file(s, handle, targetpath, filename):
     url = cf.dcc_url + "/dsweb/GET/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     r = s.post(url,headers=headers) 
-    print(r.headers)
+#     print(r.headers)
     file = open(targetpath + filename,'wb')
     for chunk in r.iter_content(100000):
         file.write(chunk)
@@ -80,7 +84,7 @@ def get_basic_info(s, handle):
     xml = """<?xml version="1.0" ?>
         <propfind>
             <prop>
-                <title/><handle/><document/>
+                <title/><handle/><document/><getlastmodified/><size/>
             </prop>
         </propfind>"""     
     r = s.post(url,data=xml,headers=headers)     
@@ -103,7 +107,9 @@ def get_basic_info(s, handle):
     handle = dom.dsref['handle']
 #     print('handle = ', handle)
     author = dom.author
-    info = {'title':title, 'handle':handle, 'filename':filename}
+    date = dom.getlastmodified.text
+    size = int(dom.size.text)
+    info = {'title':title, 'handle':handle, 'filename':filename, 'date':date, 'size':size}
     return(info)
        
 def get_locations(s, handle):
@@ -124,29 +130,41 @@ def get_locations(s, handle):
         locations.append([coll['handle'],coll.displayname.text])
     return locations
     
-def get_collections_in_collection(s, coll):
-    c_handles = dcc_get_coll_handles(s, coll)
+def get_collections_in_collection(s, coll, **kwargs):
+    c_handles = dcc_get_coll_handles(s, coll, **kwargs)
     colllist = []
+    try:
+        pflag = kwargs.get('Print')
+    except:
+        pflag = True
     for c in c_handles:
         if 'Collection-' in c:
-            print('Collection: ', c) 
+            if pflag:
+                print('Collection: ', c) 
             colllist.append(c)
         else:
-            print('Other: ', c)
+            if pflag:
+                print('Other: ', c)
     fh = open(cf.dccfilepath + coll + '_colls.txt','w')
     json.dump(colllist, fh)
     fh.close()
     return colllist    
     
-def get_files_in_collection(s, coll):
-    c_handles = dcc_get_coll_handles(s, coll)
+def get_files_in_collection(s, coll, **kwargs):
+    c_handles = dcc_get_coll_handles(s, coll, **kwargs)
     doclist = []
+    try:
+        pflag = kwargs.get('Print')
+    except:
+        pflag = True
     for c in c_handles:
         if 'Document-' in c:
-            print('Document: ', c) 
+            if pflag:
+                print('Document: ', c) 
             doclist.append(c)
         else:
-            print('Other: ', c)
+            if pflag:
+                print('Other: ', c)
     fh = open(cf.dccfilepath + coll + '_docs.txt','w')
     json.dump(doclist, fh)
     fh.close()
@@ -171,7 +189,7 @@ def dom_prop_find_coll(s, target):
     dom = BeautifulSoup(r.text)
     return dom
 
-def prop_find(s, target):
+def prop_find(s, target, **kwargs):
     # POST /dscgi/ds.py/PROPFIND/Collection-49 HTTP/1.1
     # Host: docushare.xerox.com
     # Accept: text/xml
@@ -190,9 +208,13 @@ def prop_find(s, target):
     
     url = cf.dcc_url + "/dsweb/PROPFIND/" + target
     # See if it is a collection
-    if url.find('Collection') >= 0:
-        headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"infinity"}  
-
+    if 'Collection' in url:
+        try:
+            depth = kwargs.get('Depth')
+            headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":depth} 
+        except:    
+            headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"infinity"}
+            
         xml = """<?xml version="1.0" ?>
             <propfind>
                 <prop>
@@ -206,8 +228,8 @@ def prop_find(s, target):
         r = s.post(url,headers=headers)     # Gets all data
     return(r)
     
-def dom_prop_find(s, target):
-    r = prop_find(s, target)
+def dom_prop_find(s, target, **kwargs):
+    r = prop_find(s, target, **kwargs)
     # Need to add flag to turn on / off writing to file
     webfile = open(cf.dccfilepath + target+".html",'wb')
     for chunk in r.iter_content(100000):
@@ -429,8 +451,8 @@ def file_read_collection(coll):
         clist.append(fd)
     return(clist)
     
-def dcc_read_collection(s, coll_handle):
-    dom = dom_prop_find(s, coll_handle)
+def dcc_read_collection(s, coll_handle, **kwargs):
+    dom = dom_prop_find(s, coll_handle, **kwargs)
 
     clist = []
     for res in dom.find_all("response"):
@@ -439,13 +461,16 @@ def dcc_read_collection(s, coll_handle):
         fd['owner'] = [res.entityowner.displayname.text, res.entityowner.username.text,res.entityowner.dsref['handle']]
         fd['tmtnum'] = res.summary.text
         fd['parents'] = []
-        for par in res.find_all("parents"):
-            fd['parents'].append([par.dsref['handle'],par.displayname.text])
+        try:
+            for par in res.find_all("parents"):
+                fd['parents'].append([par.dsref['handle'],par.displayname.text])
+        except:
+            fd['parents'] = [coll_handle,'No Parent Exists']
         clist.append(fd)
     return(clist)
     
-def dcc_get_coll_handles(s, c_handle):
-    clist = dcc_read_collection(s, c_handle)
+def dcc_get_coll_handles(s, c_handle, **kwargs):
+    clist = dcc_read_collection(s, c_handle, **kwargs)
     h = []
     for c in clist:
         h.append(c['name'][1])
@@ -481,4 +506,128 @@ def check_docs_in_coll(s, dl, cl):
             if not d in cdl:
                 print(d, ' not found in ', c)
             else:
-                print(d, ' found in ', c)    
+                print(d, ' found in ', c)
+                
+# traverse follows the collection structure on the DCC and replicates it on the local disk
+def traverse(s, coll, dirpath = './', indent = '', **kwargs):
+    pflag = False
+    savefiles = kwargs.get('SaveFiles', False)
+    exclude = kwargs.get('Exclude', [])        
+    maxfilesize = kwargs.get('MaxFileSize', sys.maxsize)
+        
+    collist = get_collections_in_collection(s, coll, Depth = '1', Print = pflag)
+    doclist = get_files_in_collection(s, coll, Depth = '1', Print = pflag)
+    cinfo = dcc_read_collection(s, coll, Depth = '0')
+    print(indent,'Files in ', coll, ': ', cinfo[0]['name'][0])
+    colname = cinfo[0]['name'][0]
+    colname = colname.replace('/',' ')
+    dirpath = dirpath + colname + '/' 
+    if savefiles:
+        try:
+            os.stat(dirpath)
+        except:
+            os.mkdir(dirpath) 
+    for doc in doclist:
+        finfo = get_basic_info(s,doc)
+        print(indent + '\t',doc)
+        print(indent + '\t\tTitle: ',finfo['title'])
+        print(indent + '\t\tFileName: ',finfo['filename'],' [',finfo['date'],']' ,' [', finfo['size'],' bytes ]')
+        filedirpath = dirpath + finfo.get('title').replace('/',' ') + '/'
+        filename = finfo.get('filename')
+        if savefiles:
+            try:
+                os.stat(filedirpath)
+            except:
+                os.mkdir(filedirpath)
+        if not os.path.isfile(filedirpath+filename):
+            print(indent + "\t\t\tFile doesn't exist")
+            if savefiles:
+                if finfo['size'] < maxfilesize:
+                    print(indent + "\t\t\tGetting file")
+                    get_file(s, doc, filedirpath, finfo['filename'])
+                else:
+                    print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
+            else:
+                print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
+
+
+        elif (datetime.strptime(finfo['date'],'%a, %d %b %Y %H:%M:%S %Z') - datetime(1970,1,1)).total_seconds() > os.path.getctime(filedirpath+filename):
+            print(indent + "\t\t\tFile exists, but is out of date:", time.ctime(os.path.getctime(filedirpath+filename)))
+            if savefiles:
+                if finfo['size'] < maxfilesize:
+                    print(indent + "\t\t\tGetting updated file")
+                    get_file(s, doc, filedirpath, finfo['filename'])
+                else:
+                    print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
+            else:
+                print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
+        else:
+            print(indent + "\t\t\tFile exists, created:", time.ctime(os.path.getctime(filedirpath+filename)))
+
+    for c in collist:
+        if (not c == coll) and (not c in exclude):
+            traverse(s, c, dirpath, indent + '\t', **kwargs)
+            
+def testTraverse():        
+#     coll = 'Collection-10725'
+#     dirpath = r'/Users/sroberts/Box Sync/TMT DCC Files/M1CS/'
+#     exclude = ['Collection-10836', 'Collection-10837']
+#     
+#     coll = 'Collection-8277'
+#     dirpath = r'/Users/sroberts/Box Sync/TMT DCC Files/Configuration Control/'
+
+
+    
+#     exclude = [
+#         'Collection-9908', 
+#         'Collection-10023', 'Collection-10026', 'Collection-10025', 
+#         'Collection-10024', 'Collection-9895', 'Collection-8288', 
+#         'Collection-8279', 'Collection-10582', 'Collection-8278', 
+#         'Collection-9889', 'Collection-8711', 'Collection-8283',  
+#         'Collection-9628', 'Collection-8280', 'Collection-8282', 
+#         'Collection-8281'
+#         ]
+
+#     dir = os.path.dirname(dirpath)
+#     print(dir)
+# 
+#     try:
+#         os.stat(dir)
+#     except:
+#         os.mkdir(dir)  
+
+    # Login to DCC
+    s = login(cf.dcc_url + cf.dcc_login)
+
+#     traverse(s, coll, dirpath, SaveFiles = True, Exclude = exclude, MaxFileSize = 20000000)
+    coll = 'Collection-2676'    
+    traverse(s, coll, SaveFiles = True, MaxFileSize = 10000)
+    
+def testGetBasicInfo():
+    # Login to DCC
+    s = login(cf.dcc_url + cf.dcc_login)
+    
+    finfo = get_basic_info(s,'Document-2688')
+    print('Title: ',finfo.get('title'))
+    print('Handle: ',finfo.get('handle'))
+    print('FileName: ',finfo.get('filename'))
+    print('Date: ',finfo.get('date'))
+    
+    
+def testGetColl():
+    # Login to DCC
+    s = login(cf.dcc_url + cf.dcc_login)
+    
+    coll = 'Collection-8277'
+    clist = get_collections_in_collection(s, coll, Depth = '1')
+    print(clist)
+    
+    info = get_basic_info(s,'Document-2688')
+    print(info)
+
+
+if __name__ == '__main__':
+    print("Running module test code for",__file__)
+#     testGetBasicInfo()
+    testTraverse()
+#     testGetColl()
