@@ -102,6 +102,8 @@ def scrapeRes(dom, infSet):
         fd = {'locations':locations}  
     elif infSet == 'DocAll':
         fd = read_dcc_doc_data(dom)
+    elif infSet == 'VerAll':
+        fd = read_dcc_ver_data(dom)        
     elif infSet == 'Coll':
         fd = read_dcc_coll_data(dom)
     return(fd)    
@@ -109,11 +111,13 @@ def scrapeRes(dom, infSet):
 def getProps(s, handle, **kwargs):
     # kwargs options:
     #  DocAll - All Document information
+    #  VerAll - All Version information
     #  DocDate - Document last modified date
     #  DocBasic - Document basic information
     #  Parents - Locations of documents or collections
     #  Coll - Collection information (See Depth)
     #  Depth - Level to get Collection children information ('0', '1' or 'infinity')
+    #  RetDom - Return BeautifulSoup object rather than file data structure
 
     
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
@@ -123,20 +127,22 @@ def getProps(s, handle, **kwargs):
                 'Parents':'<parents/>'}
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
+    retDom = kwargs.get('RetDom',False)
     
     if infoSet in infoDic:
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>""" 
         r = s.post(url,data=xml,headers=headers)
-    elif infoSet == 'DocAll':
+    elif infoSet == 'DocAll' or infoSet == 'VerAll':
         r = s.post(url,headers=headers)
     elif infoSet == 'Coll':
         depth = kwargs.get('Depth','0')
         headers['Depth'] = depth
         r = s.post(url,headers=headers)
-        
     if writeRes:
         writeProps(r, handle + '_' + infoSet)
     dom = BeautifulSoup(r.text)
+    if retDom:
+        return(dom)
     fd = scrapeRes(dom, infoSet)
     return(fd)
     
@@ -287,7 +293,6 @@ def add_docs_2_collections(s, docs, colls):
             headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "DESTINATION": c}
             r = s.post(url, headers=headers)
             print(r.text)
-            
             
 def download_html(url, cookies, outfile):
     # Writes html from url to outfile
@@ -645,7 +650,7 @@ def testGetProps():
     # Login to DCC
     s = login(cf.dcc_url + cf.dcc_login)
     
-#     handle = 'Document-2688'
+    handle = 'Document-2688'
 #     
 #     print('DocBasic test')
 #     fd = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
@@ -673,9 +678,23 @@ def testGetProps():
 #     fd = read_dcc_coll_data(dom)
 #     print(fd)
     
-    print('\ngetProps alternative for dom_prop_find_coll')
-    fd = getProps(s, coll, InfoSet = 'Coll', Depth = '0', WriteProp = True)
-    print(fd)
+#     print('\ngetProps alternative for dom_prop_find_coll')
+#     fd = getProps(s, coll, InfoSet = 'Coll', Depth = '0', WriteProp = True)
+#     print(fd)
+
+    print('\ngetProps prop_find replacement')
+    fd = getProps(s, handle, InfoSet = 'DocAll', WriteProp = True)
+    print_doc_info(fd)
+    
+    print('prop_find test')
+    dom = dom_prop_find(s, handle)
+    fd1 = read_dcc_doc_data(dom)
+    print_doc_info(fd1)
+    
+    print('FD compare', fd == fd1)
+    
+    
+
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)

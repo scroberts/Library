@@ -169,14 +169,16 @@ def gen_ss_cid(s, dl):
     for d in dl:
         ssrow = []
         print("trying", d)
-        dom = DCC.dom_prop_find(s, d)
+#         dom = DCC.dom_prop_find(s, d)
+        dom = DCC.getProps(s,d,InfoSet = 'DocAll', WriteProp = True, RetDom = True)
         if d.find("Document") >= 0:
             # CID link is to a document Handle
             doc = DCC.read_dcc_doc_data(dom)
             cidlink = doc
             # Now read preferred version
-            dom = DCC.dom_prop_find(s, doc['prefver'])
-            prefver = DCC.read_dcc_ver_data(dom)
+#             dom = DCC.dom_prop_find(s, doc['prefver'])
+#             prefver = DCC.read_dcc_ver_data(dom)
+            prefver = DCC.getProps(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
             # Subject Document
             ssrow.append(doc['dccnum'])
             ssrow.append(doc['dccname'])
@@ -203,16 +205,18 @@ def gen_ss_cid(s, dl):
             # CID link is to a version handle
             ver = DCC.read_dcc_ver_data(dom)
             cidlink = ver
-            dom = DCC.dom_prop_find(s, ver['dccdoc'])
-            doc = DCC.read_dcc_doc_data(dom)
+#             dom = DCC.dom_prop_find(s, ver['dccdoc'])
+#             doc = DCC.read_dcc_doc_data(dom)
+            doc = DCC.getProps(s,ver['dccdoc'],InfoSet = 'DocAll', WriteProp = True)
             # Subject Document
             ssrow.append(doc['dccnum'])
             ssrow.append(doc['dccname'])
             ssrow.append(doc['tmtnum'])
             ssrow.append(doc['owner-username'])  
             # find info on the preferred version
-            dom = DCC.dom_prop_find(s, doc['prefver'])
-            prefver = DCC.read_dcc_ver_data(dom) 
+#             dom = DCC.dom_prop_find(s, doc['prefver'])
+#             prefver = DCC.read_dcc_ver_data(dom) 
+            prefver = DCC.getProps(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
             # Evaluation of current reference          
             print("CID references Version")
             print(doc['dccnum'], doc['dccname'], doc['tmtnum'])
