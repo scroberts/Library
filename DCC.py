@@ -8,9 +8,9 @@ import requests
 import getpass
 import json
 import os
-import time
 import sys
 from datetime import datetime
+import time
 
 # my modules
 import config as cf
@@ -75,6 +75,41 @@ def get_file(s, handle, targetpath, filename):
         file.write(chunk)
     file.close
     return(r) 
+    
+def writeProps(r, fname):
+    webfile = open(cf.dccfilepath + fname +".html",'wb')
+    for chunk in r.iter_content(100000):
+        webfile.write(chunk)
+    webfile.close
+    
+def scrapeRes(dom, fd, infSet):
+    if infSet == 'DocBasic':
+        title = dom.title.text
+        filename = dom.document.text
+        handle = dom.dsref['handle']
+        author = dom.author
+        date = dom.getlastmodified.text
+        size = int(dom.size.text)
+        fd = {'title':title, 'handle':handle, 'filename':filename, 'date':date, 'size':size}
+    elif infSet == 'DocDate':
+        date = dom.getlastmodified.text
+    return(fd)    
+    
+def getProps(s, handle, **kwargs):
+    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+    infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
+                'DocDate':'<getlastmodified>'}
+    infoSet = kwargs.get('InfoSet','DocBasic')
+    writeRes = kwargs.get('WriteProp', True)
+    
+    xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>""" 
+    r = s.post(url,data=xml,headers=headers)
+    if writeRes:
+        writeProps(r, handle + '_' + infoSet)
+    dom = BeautifulSoup(r.text)
+    fd = scrapeRes(dom, {}, infoSet)
+    return(fd)
     
 def get_basic_info(s, handle):
     # Get the basic file information
@@ -604,14 +639,30 @@ def testTraverse():
     traverse(s, coll, SaveFiles = True, MaxFileSize = 10000)
     
 def testGetBasicInfo():
+    import time
     # Login to DCC
     s = login(cf.dcc_url + cf.dcc_login)
     
-    finfo = get_basic_info(s,'Document-2688')
+    start = time.time()
+    for i in range(10):
+        finfo = get_basic_info(s,'Document-2688')
+    end = time.time()
+    delta = (end-start)/10
+    print('get_basic_info run time = ',delta, 'sec')
+    
     print('Title: ',finfo.get('title'))
     print('Handle: ',finfo.get('handle'))
     print('FileName: ',finfo.get('filename'))
     print('Date: ',finfo.get('date'))
+    
+    start = time.time()
+    for i in range(2):
+        r = prop_find(s,'Document-2688')
+        dom = BeautifulSoup(r.text)
+        fd = read_dcc_doc_data(dom)
+    end = time.time()
+    delta = (end-start)/2
+    print('prop_find run time = ',delta, 'sec')
     
     
 def testGetColl():
@@ -625,9 +676,19 @@ def testGetColl():
     info = get_basic_info(s,'Document-2688')
     print(info)
 
+def testGetProps():
+    # Login to DCC
+    s = login(cf.dcc_url + cf.dcc_login)
+    
+    fd = getProps(s, 'Document-2688', InfoSet = 'DocBasic', WriteProp = True)
+    print(fd)
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
+
+    testGetProps()
 #     testGetBasicInfo()
-    testTraverse()
+#     testTraverse()
 #     testGetColl()
+
+    
