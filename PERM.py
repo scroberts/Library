@@ -78,8 +78,9 @@ def checkPerms(target, permissions):
             print("TMT Document Number: ", fd['tmtnum'])
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
         elif 'Collection' in doc:
-            dom = DCC.dom_prop_find_coll(s, doc)
-            fd = DCC.read_dcc_coll_data(dom)
+            fd = DCC.getProps(s, doc, InfoSet = 'Coll', Depth = '0', WriteProp = True)
+#             dom = DCC.dom_prop_find_coll(s, doc)
+#             fd = DCC.read_dcc_coll_data(dom)
             print("\n\n*** Document Entry", fd['dccnum'], "***\n")
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
         else:

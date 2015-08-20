@@ -82,7 +82,7 @@ def writeProps(r, fname):
         webfile.write(chunk)
     webfile.close
     
-def scrapeRes(dom, fd, infSet):
+def scrapeRes(dom, infSet):
     if infSet == 'DocBasic':
         title = dom.title.text
         filename = dom.document.text
@@ -93,77 +93,60 @@ def scrapeRes(dom, fd, infSet):
         fd = {'title':title, 'handle':handle, 'filename':filename, 'date':date, 'size':size}
     elif infSet == 'DocDate':
         date = dom.getlastmodified.text
+        fd = {'date':date}
+    elif infSet == 'Parents':
+        colls = dom.find("parents").find_all("dsref")
+        locations = []
+        for coll in colls:
+            locations.append([coll['handle'],coll.displayname.text])
+        fd = {'locations':locations}  
+    elif infSet == 'DocAll':
+        fd = read_dcc_doc_data(dom)
+    elif infSet == 'Coll':
+        fd = read_dcc_coll_data(dom)
     return(fd)    
     
 def getProps(s, handle, **kwargs):
+    # kwargs options:
+    #  DocAll - All Document information
+    #  DocDate - Document last modified date
+    #  DocBasic - Document basic information
+    #  Parents - Locations of documents or collections
+    #  Coll - Collection information (See Depth)
+    #  Depth - Level to get Collection children information ('0', '1' or 'infinity')
+
+    
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
-                'DocDate':'<getlastmodified>'}
+                'DocDate':'<getlastmodified/>',
+                'Parents':'<parents/>'}
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
     
-    xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>""" 
-    r = s.post(url,data=xml,headers=headers)
+    if infoSet in infoDic:
+        xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>""" 
+        r = s.post(url,data=xml,headers=headers)
+    elif infoSet == 'DocAll':
+        r = s.post(url,headers=headers)
+    elif infoSet == 'Coll':
+        depth = kwargs.get('Depth','0')
+        headers['Depth'] = depth
+        r = s.post(url,headers=headers)
+        
     if writeRes:
         writeProps(r, handle + '_' + infoSet)
     dom = BeautifulSoup(r.text)
-    fd = scrapeRes(dom, {}, infoSet)
+    fd = scrapeRes(dom, infoSet)
     return(fd)
     
 def get_basic_info(s, handle):
-    # Get the basic file information
-    # Note that handle returns a file- or rendition- that can be used to get the file
-    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
-    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    xml = """<?xml version="1.0" ?>
-        <propfind>
-            <prop>
-                <title/><handle/><document/><getlastmodified/><size/>
-            </prop>
-        </propfind>"""     
-    r = s.post(url,data=xml,headers=headers)     
-#     print(r.status_code)
-#     print(r.text)
-    
-#     file = open('test.xml','wb')
-#     for chunk in r.iter_content(100000):
-#         file.write(chunk)
-#     file.close
-#     
-    dom = BeautifulSoup(r.text)
-    # note that the first next_sibling is a whitespace character
-    # See http://www.crummy.com/software/BeautifulSoup/bs4/doc/#going-down
-    #   and search for 'you might think'
-    
-#     dom = dom.multistatus.response.next_sibling.next_sibling
-    title = dom.title.text
-    filename = dom.document.text
-    handle = dom.dsref['handle']
-#     print('handle = ', handle)
-    author = dom.author
-    date = dom.getlastmodified.text
-    size = int(dom.size.text)
-    info = {'title':title, 'handle':handle, 'filename':filename, 'date':date, 'size':size}
+    info = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
     return(info)
        
 def get_locations(s, handle):
-    # Get all the locations for a document or a collection
-    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
-    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    xml = """<?xml version="1.0" ?>
-        <propfind>
-            <prop>
-                <parents/> 
-            </prop>
-        </propfind>"""     
-    r = s.post(url,data=xml,headers=headers)  # Gets limited data
-    dom = BeautifulSoup(r.text)
-    colls = dom.find("parents").find_all("dsref")
-    locations = []
-    for coll in colls:
-        locations.append([coll['handle'],coll.displayname.text])
-    return locations
+    fd = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
+    return(fd['locations'])
     
 def get_collections_in_collection(s, coll, **kwargs):
     c_handles = dcc_get_coll_handles(s, coll, **kwargs)
@@ -205,24 +188,6 @@ def get_files_in_collection(s, coll, **kwargs):
     fh.close()
     return doclist
 
-def prop_find_coll(s, target):
-    if 'Collection' in target:
-        url = cf.dcc_url + "/dsweb/PROPFIND/" + target
-        headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"0"}
-        r = s.post(url,headers=headers)     # Gets all data
-        return(r)
-    else:
-        sys.exit('Error: call to prop_find_collection without target collection')
-
-def dom_prop_find_coll(s, target):
-    r = prop_find_coll(s, target)
-    # Need to add flag to turn on / off writing to file
-    webfile = open(cf.dccfilepath + target+".html",'wb')
-    for chunk in r.iter_content(100000):
-        webfile.write(chunk)
-    webfile.close
-    dom = BeautifulSoup(r.text)
-    return dom
 
 def prop_find(s, target, **kwargs):
     # POST /dscgi/ds.py/PROPFIND/Collection-49 HTTP/1.1
@@ -680,7 +645,36 @@ def testGetProps():
     # Login to DCC
     s = login(cf.dcc_url + cf.dcc_login)
     
-    fd = getProps(s, 'Document-2688', InfoSet = 'DocBasic', WriteProp = True)
+#     handle = 'Document-2688'
+#     
+#     print('DocBasic test')
+#     fd = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
+#     print(fd)
+#     
+#     print('\nCompare with get_basic_info')
+#     fd1 = get_basic_info(s, handle)
+#     print(fd1)
+#     
+#     print('\nDocDate test')
+#     fd = getProps(s, handle, InfoSet = 'DocDate', WriteProp = True)
+#     print(fd)
+#     
+#     print('\nParents test')
+#     fd = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
+#     print(fd['locations'])
+#     
+#     print('\nCompare with get_locations')
+#     locations = get_locations(s, handle)
+#     print(locations)
+#     
+#     print('\ndom_prop_find_coll')
+#     coll = 'Collection-8277'   
+#     dom = dom_prop_find_coll(s, coll)
+#     fd = read_dcc_coll_data(dom)
+#     print(fd)
+    
+    print('\ngetProps alternative for dom_prop_find_coll')
+    fd = getProps(s, coll, InfoSet = 'Coll', Depth = '0', WriteProp = True)
     print(fd)
 
 if __name__ == '__main__':
@@ -690,5 +684,26 @@ if __name__ == '__main__':
 #     testGetBasicInfo()
 #     testTraverse()
 #     testGetColl()
+
+
+
+# def prop_find_coll(s, target):
+#     if 'Collection' in target:
+#         url = cf.dcc_url + "/dsweb/PROPFIND/" + target
+#         headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"0"}
+#         r = s.post(url,headers=headers)     # Gets all data
+#         return(r)
+#     else:
+#         sys.exit('Error: call to prop_find_collection without target collection')
+
+# def dom_prop_find_coll(s, target):
+#     r = prop_find_coll(s, target)
+#     # Need to add flag to turn on / off writing to file
+#     webfile = open(cf.dccfilepath + target+".html",'wb')
+#     for chunk in r.iter_content(100000):
+#         webfile.write(chunk)
+#     webfile.close
+#     dom = BeautifulSoup(r.text)
+#     return dom
 
     
