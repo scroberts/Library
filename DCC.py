@@ -513,6 +513,28 @@ def check_docs_in_coll(s, dl, cl):
             else:
                 print(d, ' found in ', c)
                 
+def mkCol(s,parentColl, collName, collDesc):
+    # Create a collection, return the handle
+    url = cf.dcc_url + "/dsweb/MKCOL/" + parentColl
+    
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+     
+    xml1 = """<?xml version="1.0" ?><propertyupdate><set><prop><displayname><![CDATA["""
+    xml2 = """]]></displayname><description>"""
+    xml3 = """</description></prop></set></propertyupdate>"""
+    xml = xml1 + collName + xml2 + collDesc + xml3   
+    
+    r = s.post(url,data=xml,headers=headers)  # Gets limited data
+    
+#     print(xml)
+#     print("Status Code:", r.status_code)
+#     print('headers:\n', r.headers)
+#     print('collection = ',handle)
+#     print('r.text:\n',r.text)
+
+    handle = r.headers['docushare-handle']
+    return(handle)
+                
 # traverse follows the collection structure on the DCC and replicates it on the local disk
 def traverse(s, coll, dirpath = './', indent = '', **kwargs):
     pflag = False
