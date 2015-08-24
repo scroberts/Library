@@ -110,15 +110,15 @@ def scrapeRes(dom, infSet):
     
 def getProps(s, handle, **kwargs):
     # kwargs options:
-    #  DocAll - All Document information
-    #  VerAll - All Version information
-    #  DocDate - Document last modified date
-    #  DocBasic - Document basic information
-    #  Parents - Locations of documents or collections
-    #  Coll - Collection information (See Depth)
     #  Depth - Level to get Collection children information ('0', '1' or 'infinity')
+    #  InfoSet = Coll - Collection information (See Depth)
+    #  InfoSet = DocAll - All Document information
+    #  InfoSet = DocBasic - Document basic information
+    #  InfoSet = DocDate - Document last modified date
+    #  InfoSet = Parents - Locations of documents or collections
+    #  InfoSet = VerAll - All Version information
     #  RetDom - Return BeautifulSoup object rather than file data structure
-
+    #  WriteProp = (True|False)
     
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
@@ -145,22 +145,13 @@ def getProps(s, handle, **kwargs):
         return(dom)
     fd = scrapeRes(dom, infoSet)
     return(fd)
-    
-def get_basic_info(s, handle):
-    info = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
-    return(info)
-       
-def get_locations(s, handle):
-    fd = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
-    return(fd['locations'])
+
     
 def get_collections_in_collection(s, coll, **kwargs):
     c_handles = dcc_get_coll_handles(s, coll, **kwargs)
     colllist = []
-    try:
-        pflag = kwargs.get('Print')
-    except:
-        pflag = True
+    pflag = kwargs.get('Print', True)
+
     for c in c_handles:
         if 'Collection-' in c:
             if pflag:
@@ -261,10 +252,15 @@ def dcc_move(s, handle, source, dest):
     print(r.text)
     
 def dcc_remove_doc_from_coll(s, handle, coll):
-    # Find other collections where the document exists
-    loc = get_locations(s, handle)
+    """ Removes the location of the document from the collection
+        handle - the document handle
+        coll - the parent collection
+    """
+    # First find other collections where the document exists
+    parent_info = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
+    loc = parent_info['locations']
     incoll = False  # Flag to check that the document exists in the collection
-    target = None # target should contains a valid target collection
+    target = None # target should contain a valid target collection
     for l in loc:
         # Find another collection where the document exists that can be the destination
         if coll != l[0]:
@@ -441,6 +437,7 @@ def get_handle(url):
     return(handle)
 
 def file_read_collection(coll):
+    # Reads collection data from a .html file on disk
     htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
     fh=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
     dom = BeautifulSoup(fh)
@@ -457,6 +454,7 @@ def file_read_collection(coll):
     return(clist)
     
 def dcc_read_collection(s, coll_handle, **kwargs):
+    # Reads collection data from the DCC
     dom = dom_prop_find(s, coll_handle, **kwargs)
 
     clist = []
@@ -535,8 +533,9 @@ def mkCol(s,parentColl, collName, collDesc):
     handle = r.headers['docushare-handle']
     return(handle)
                 
-# traverse follows the collection structure on the DCC and replicates it on the local disk
+
 def traverse(s, coll, dirpath = './', indent = '', **kwargs):
+    # traverse follows the collection structure on the DCC and replicates it on the local disk
     pflag = False
     savefiles = kwargs.get('SaveFiles', False)
     exclude = kwargs.get('Exclude', [])        
@@ -555,7 +554,7 @@ def traverse(s, coll, dirpath = './', indent = '', **kwargs):
         except:
             os.mkdir(dirpath) 
     for doc in doclist:
-        finfo = get_basic_info(s,doc)
+        finfo = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
         print(indent + '\t',doc)
         print(indent + '\t\tTitle: ',finfo['title'])
         print(indent + '\t\tFileName: ',finfo['filename'],' [',finfo['date'],']' ,' [', finfo['size'],' bytes ]')
@@ -630,31 +629,7 @@ def testTraverse():
     coll = 'Collection-2676'    
     traverse(s, coll, SaveFiles = True, MaxFileSize = 10000)
     
-def testGetBasicInfo():
-    import time
-    # Login to DCC
-    s = login(cf.dcc_url + cf.dcc_login)
-    
-    start = time.time()
-    for i in range(10):
-        finfo = get_basic_info(s,'Document-2688')
-    end = time.time()
-    delta = (end-start)/10
-    print('get_basic_info run time = ',delta, 'sec')
-    
-    print('Title: ',finfo.get('title'))
-    print('Handle: ',finfo.get('handle'))
-    print('FileName: ',finfo.get('filename'))
-    print('Date: ',finfo.get('date'))
-    
-    start = time.time()
-    for i in range(2):
-        r = prop_find(s,'Document-2688')
-        dom = BeautifulSoup(r.text)
-        fd = read_dcc_doc_data(dom)
-    end = time.time()
-    delta = (end-start)/2
-    print('prop_find run time = ',delta, 'sec')
+
     
     
 def testGetColl():
@@ -665,7 +640,8 @@ def testGetColl():
     clist = get_collections_in_collection(s, coll, Depth = '1')
     print(clist)
     
-    info = get_basic_info(s,'Document-2688')
+    handle = 'Document-2688')
+    info = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
     print(info)
 
 def testGetProps():
@@ -673,36 +649,7 @@ def testGetProps():
     s = login(cf.dcc_url + cf.dcc_login)
     
     handle = 'Document-2688'
-#     
-#     print('DocBasic test')
-#     fd = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
-#     print(fd)
-#     
-#     print('\nCompare with get_basic_info')
-#     fd1 = get_basic_info(s, handle)
-#     print(fd1)
-#     
-#     print('\nDocDate test')
-#     fd = getProps(s, handle, InfoSet = 'DocDate', WriteProp = True)
-#     print(fd)
-#     
-#     print('\nParents test')
-#     fd = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
-#     print(fd['locations'])
-#     
-#     print('\nCompare with get_locations')
-#     locations = get_locations(s, handle)
-#     print(locations)
-#     
-#     print('\ndom_prop_find_coll')
-#     coll = 'Collection-8277'   
-#     dom = dom_prop_find_coll(s, coll)
-#     fd = read_dcc_coll_data(dom)
-#     print(fd)
-    
-#     print('\ngetProps alternative for dom_prop_find_coll')
-#     fd = getProps(s, coll, InfoSet = 'Coll', Depth = '0', WriteProp = True)
-#     print(fd)
+
 
     print('\ngetProps prop_find replacement')
     fd = getProps(s, handle, InfoSet = 'DocAll', WriteProp = True)
