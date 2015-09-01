@@ -55,14 +55,49 @@ def login(url):
     # print('Cookies:\n', c)
     return s
     
-def get_yn(question):
-    ans = ''
-    while (ans.upper() != 'Y') and (ans.upper() != 'N'):
-        print(question,end="")
-        ans = input()
-    if ans.upper() == 'Y':
-        return True
-    return False
+def change_owner(s, dochandle, userhandle):
+    url = cf.dcc_url + "/dsweb/PROPPATCH/" + dochandle
+    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
+    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><entityowner><dsref handle="'''
+    xml += userhandle
+    xml += '''"/></entityowner></prop></set></propertyupdate>'''
+    print(xml)
+    r = s.post(url,data=xml,headers=headers)
+    print(r.text)
+    print(r.headers)
+    print("Owner Change Status Code:", r.status_code)
+
+
+def set_permissions(s,handle,fd):
+    # fd follows the permissions dictionary format
+    
+    url = cf.dcc_url + "/dsweb/PROPPATCH/" + handle
+    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
+    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><acl handle="''' 
+    xml += handle
+    xml += '''">'''
+    for entry in fd:
+        read = entry.get('Read','False')
+        write = entry.get('Write','False')
+        manage = entry.get('Manage','False')
+        
+        xml += '''<ace><principal><dsref handle="'''
+        xml += entry['handle']
+        xml += '''"/></principal><grant>'''
+        if read == True:
+            xml += '''<readlinked/><readobject/><readhistory/>'''
+        if write == True:
+            xml += '''<writelinked/><writeobject/>'''
+        if manage == True:
+            xml += '''<manage/>'''
+        xml += '''</grant><cascade/></ace>'''   
+    xml += '''</acl></prop></set></propertyupdate>'''
+#     print(xml)
+    r = s.post(url,data=xml,headers=headers)
+    print("Permission Change Status Code:", r.status_code)
+#     print(r.text)
+#     print(r.headers)
+
     
 def get_file(s, handle, targetpath, filename):
     # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
@@ -106,6 +141,8 @@ def scrapeRes(dom, infSet):
         fd = read_dcc_ver_data(dom)        
     elif infSet == 'Coll':
         fd = read_dcc_coll_data(dom)
+    elif infSet == 'Perms':
+        fd = read_dcc_doc_perms(dom)
     return(fd)    
     
 def getProps(s, handle, **kwargs):
@@ -116,6 +153,7 @@ def getProps(s, handle, **kwargs):
     #  InfoSet = DocBasic - Document basic information
     #  InfoSet = DocDate - Document last modified date
     #  InfoSet = Parents - Locations of documents or collections
+    #  InfoSet = Perms - Document Permissions
     #  InfoSet = VerAll - All Version information
     #  RetDom - Return BeautifulSoup object rather than file data structure
     #  WriteProp = (True|False)
@@ -124,7 +162,9 @@ def getProps(s, handle, **kwargs):
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
                 'DocDate':'<getlastmodified/>',
-                'Parents':'<parents/>'}
+                'Parents':'<parents/>',
+                'Perms':'<private/><acl/>'}
+
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
     retDom = kwargs.get('RetDom',False)
@@ -132,7 +172,7 @@ def getProps(s, handle, **kwargs):
     if infoSet in infoDic:
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>""" 
         r = s.post(url,data=xml,headers=headers)
-    elif infoSet == 'DocAll' or infoSet == 'VerAll':
+    elif infoSet == 'DocAll' or infoSet == 'VerAll' or infoSet == 'Perms':
         r = s.post(url,headers=headers)
     elif infoSet == 'Coll':
         depth = kwargs.get('Depth','0')
@@ -326,6 +366,27 @@ def read_dcc_coll_data(dom):
     fd["permissions"] = perms
     return(fd)
 
+def read_dcc_doc_perms(dom):
+    fd = {}
+    # Permissions
+    perms = []
+    for p in dom.find_all("ace"):       
+        pentry = {}
+        pentry["handle"] = p.dsref.get('handle')
+        pentry["name"] = p.displayname.text
+        if p.searchers != None:
+            pentry["Search"] = True
+        if p.readers != None:
+            pentry["Read"] = True
+        if p.writers != None:
+            pentry["Write"] = True 
+        if p.managers != None:
+            pentry["Manage"] = True
+        perms.append(pentry)  
+    fd["permissions"] = perms
+    return(fd)
+
+
 def read_dcc_doc_data(dom):
     # fill in file data dictionary
     fd = {}
@@ -350,21 +411,7 @@ def read_dcc_doc_data(dom):
         fd['versions'].append([ver.dsref['handle'],ver.comment.text,ver.videntifier.text.zfill(2),ver.username.text])
     # pprint.pprint(fd['versions'])
     # Permissions
-    perms = []
-    for p in dom.find_all("ace"):       
-        pentry = {}
-        pentry["handle"] = p.dsref.get('handle')
-        pentry["name"] = p.displayname.text
-        if p.searchers != None:
-            pentry["Search"] = True
-        if p.readers != None:
-            pentry["Read"] = True
-        if p.writers != None:
-            pentry["Write"] = True 
-        if p.managers != None:
-            pentry["Manage"] = True
-        perms.append(pentry)  
-    fd["permissions"] = perms
+    fd["permissions"] = read_dcc_doc_perms(dom)
     return(fd)
 
 def print_doc_info(fd):
@@ -640,7 +687,7 @@ def testGetColl():
     clist = get_collections_in_collection(s, coll, Depth = '1')
     print(clist)
     
-    handle = 'Document-2688')
+    handle = 'Document-2688'
     info = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
     print(info)
 
