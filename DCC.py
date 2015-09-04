@@ -90,7 +90,10 @@ def set_permissions(s,handle,fd):
             xml += '''<writelinked/><writeobject/>'''
         if manage == True:
             xml += '''<manage/>'''
-        xml += '''</grant><cascade/></ace>'''   
+        if 'Collection' in handle:
+            xml += '''</grant></ace>'''   
+        if 'File' in handle or 'Document' in handle:
+            xml += '''</grant><cascade/></ace>'''   
     xml += '''</acl></prop></set></propertyupdate>'''
 #     print(xml)
     r = s.post(url,data=xml,headers=headers)
@@ -117,7 +120,7 @@ def writeProps(r, fname):
         webfile.write(chunk)
     webfile.close
     
-def scrapeRes(dom, infSet):
+def scrapeRes(dom, infSet, depth):
     if infSet == 'DocBasic':
         title = dom.title.text
         filename = dom.document.text
@@ -140,7 +143,10 @@ def scrapeRes(dom, infSet):
     elif infSet == 'VerAll':
         fd = read_dcc_ver_data(dom)        
     elif infSet == 'Coll':
-        fd = read_dcc_coll_data(dom)
+        if depth == 0:
+            fd = read_dcc_coll_data(dom)
+        else:
+            fd = read_coll_content(dom)
     elif infSet == 'Perms':
         fd = read_dcc_doc_perms(dom)
     return(fd)    
@@ -148,6 +154,8 @@ def scrapeRes(dom, infSet):
 def getProps(s, handle, **kwargs):
     # kwargs options:
     #  Depth - Level to get Collection children information ('0', '1' or 'infinity')
+    #       '0' returns information on Collection itself
+    #       '1' and 'infinity' return information on Collection content
     #  InfoSet = Coll - Collection information (See Depth)
     #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
@@ -163,27 +171,28 @@ def getProps(s, handle, **kwargs):
     infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
                 'DocDate':'<getlastmodified/>',
                 'Parents':'<parents/>',
-                'Perms':'<private/><acl/>'}
+                'Perms':'<private/><acl/>',
+                'Coll' : '<displayname/><summary/><entityowner/><getcontenttype/><parents/>' }
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
     retDom = kwargs.get('RetDom',False)
+    depth = kwargs.get('Depth','0')
     
     if infoSet in infoDic:
-        xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>""" 
+        xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
+        if infoSet == 'Coll':
+            headers['Depth'] = depth     
         r = s.post(url,data=xml,headers=headers)
     elif infoSet == 'DocAll' or infoSet == 'VerAll' or infoSet == 'Perms':
         r = s.post(url,headers=headers)
-    elif infoSet == 'Coll':
-        depth = kwargs.get('Depth','0')
-        headers['Depth'] = depth
-        r = s.post(url,headers=headers)
+
     if writeRes:
         writeProps(r, handle + '_' + infoSet)
     dom = BeautifulSoup(r.text)
     if retDom:
         return(dom)
-    fd = scrapeRes(dom, infoSet)
+    fd = scrapeRes(dom, infoSet, depth)
     return(fd)
 
     
@@ -337,54 +346,37 @@ def download_html(url, cookies, outfile):
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
-
-def read_dcc_coll_data(dom):
-    fd = {}
-    fd['dccnum'] = get_handle(dom.acl['handle'])
-    fd['modified'] = dom.getlastmodified.text
-    fd['owner-name'] = dom.entityowner.displayname.text
-    fd['owner-username'] = dom.entityowner.username.text
-    fd['owner-userid'] = dom.entityowner.dsref['handle']
-    fd['date'] = dom.getlastmodified.text
-
-    # Permissions
-    perms = []
-    for p in dom.find_all("ace"):       
-        pentry = {}
-        pentry["handle"] = p.dsref.get('handle')
-        pentry["name"] = p.displayname.text
-        if p.searchers != None:
-            pentry["Search"] = True
-        if p.readers != None:
-            pentry["Read"] = True
-        if p.writers != None:
-            pentry["Write"] = True 
-        if p.managers != None:
-            pentry["Manage"] = True
-        perms.append(pentry)  
-
-    fd["permissions"] = perms
-    return(fd)
+    
+    
+def print_dcc_coll_data(fd):
+    print("\n\n*** Collection Handle", fd['dccnum'], "***\n")
+    print("Modified Date: ", fd['modified'])
+    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("Last Modified: ", fd['date'])
+    print_perm_info(fd['permissions'])
+  
 
 def read_dcc_doc_perms(dom):
     fd = {}
     # Permissions
     perms = []
-    for p in dom.find_all("ace"):       
-        pentry = {}
-        pentry["handle"] = p.dsref.get('handle')
-        pentry["name"] = p.displayname.text
-        if p.searchers != None:
-            pentry["Search"] = True
-        if p.readers != None:
-            pentry["Read"] = True
-        if p.writers != None:
-            pentry["Write"] = True 
-        if p.managers != None:
-            pentry["Manage"] = True
-        perms.append(pentry)  
-    fd["permissions"] = perms
-    return(fd)
+    for p in dom.find_all("ace"):  
+        try:     
+            pentry = {}
+            pentry["handle"] = p.dsref.get('handle')
+            pentry["name"] = p.displayname.text
+            if p.searchers != None:
+                pentry["Search"] = True
+            if p.readers != None:
+                pentry["Read"] = True
+            if p.writers != None:
+                pentry["Write"] = True 
+            if p.managers != None:
+                pentry["Manage"] = True
+            perms.append(pentry)  
+        except:
+            pass
+    return(perms)
 
 
 def read_dcc_doc_data(dom):
@@ -414,18 +406,9 @@ def read_dcc_doc_data(dom):
     fd["permissions"] = read_dcc_doc_perms(dom)
     return(fd)
 
-def print_doc_info(fd):
-    print("\n\n*** Document Entry", fd['dccnum'], "***\n")
-    print("TMT Document Number: ", fd['tmtnum'])
-    print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")
-    print("DCC Preferred Version: ", fd['prefver'])
-    print("File Name: ", "\"",fd['filename'],"\"", sep = "")
-    print("Modified Date: ", fd['modified'])
-    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
-    print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
-    print("Last Modified: ", fd['date'])
+def print_perm_info(permlist):
     print("\nPermissions...")
-    for perm in sorted(fd["permissions"], key = lambda x: x["handle"]):
+    for perm in sorted(permlist, key = lambda x: x["handle"]):
         print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
         if "Search" in perm.keys():
             print("[Search]", end="")
@@ -436,6 +419,19 @@ def print_doc_info(fd):
         if "Manage" in perm.keys():
             print("[Manage]", end="")
         print(", \"",perm['name'],"\"",sep="")
+
+
+def print_doc_info(fd):
+    print("\n\n*** Document Entry", fd['dccnum'], "***\n")
+    print("TMT Document Number: ", fd['tmtnum'])
+    print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")
+    print("DCC Preferred Version: ", fd['prefver'])
+    print("File Name: ", "\"",fd['filename'],"\"", sep = "")
+    print("Modified Date: ", fd['modified'])
+    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
+    print("Last Modified: ", fd['date'])
+    print_perm_info(fd['permissions'])
     print("\nLocations...")
     for loc in sorted(fd['locations'], key = lambda x: x[0]):
         print(loc[0],", \"",loc[1],"\"", sep="")
@@ -443,6 +439,12 @@ def print_doc_info(fd):
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['dccnum'], "***\n")
+    
+def print_doc_basic_info(fd):    
+    print("DCC Title: ", fd['title'])
+    print("DCC Document Handle/FileName: ", fd['handle'],", \"",fd['filename'],"\"",sep="")
+    print("DCC Date: ", fd['date'])
+    print("Size: ", fd['size'])
 
 def read_dcc_ver_data(dom):
     # fill in file data dictionary
@@ -483,6 +485,34 @@ def get_handle(url):
     handle = fileRegex.sub('Document', handle)
     return(handle)
 
+def read_dcc_coll_data(dom):
+    fd = {}
+    fd['dccnum'] = get_handle(dom.acl['handle'])
+    fd['modified'] = dom.getlastmodified.text
+    fd['owner-name'] = dom.entityowner.displayname.text
+    fd['owner-username'] = dom.entityowner.username.text
+    fd['owner-userid'] = dom.entityowner.dsref['handle']
+    fd['date'] = dom.getlastmodified.text
+
+    # Permissions
+    perms = []
+    for p in dom.find_all("ace"):       
+        pentry = {}
+        pentry["handle"] = p.dsref.get('handle')
+        pentry["name"] = p.displayname.text
+        if p.searchers != None:
+            pentry["Search"] = True
+        if p.readers != None:
+            pentry["Read"] = True
+        if p.writers != None:
+            pentry["Write"] = True 
+        if p.managers != None:
+            pentry["Manage"] = True
+        perms.append(pentry)  
+
+    fd["permissions"] = perms
+    return(fd)
+
 def file_read_collection(coll):
     # Reads collection data from a .html file on disk
     htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
@@ -499,11 +529,8 @@ def file_read_collection(coll):
             fd['parents'].append([par.dsref['handle'],par.displayname.text])
         clist.append(fd)
     return(clist)
-    
-def dcc_read_collection(s, coll_handle, **kwargs):
-    # Reads collection data from the DCC
-    dom = dom_prop_find(s, coll_handle, **kwargs)
 
+def read_coll_content(dom):
     clist = []
     for res in dom.find_all("response"):
         fd = {}
@@ -515,8 +542,15 @@ def dcc_read_collection(s, coll_handle, **kwargs):
             for par in res.find_all("parents"):
                 fd['parents'].append([par.dsref['handle'],par.displayname.text])
         except:
-            fd['parents'] = [coll_handle,'No Parent Exists']
+            fd['parents'] = [fd['name'][1],'No Parent Exists']
         clist.append(fd)
+    return(clist)
+    
+def dcc_read_collection(s, coll_handle, **kwargs):
+    # Reads collection data from the DCC
+    dom = dom_prop_find(s, coll_handle, **kwargs)
+
+    clist = read_coll_content(dom)
     return(clist)
     
 def dcc_get_coll_handles(s, c_handle, **kwargs):
