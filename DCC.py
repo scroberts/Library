@@ -133,11 +133,13 @@ def scrapeRes(dom, infSet, depth):
         date = dom.getlastmodified.text
         fd = {'date':date}
     elif infSet == 'Parents':
-        colls = dom.find("parents").find_all("dsref")
-        locations = []
-        for coll in colls:
-            locations.append([coll['handle'],coll.displayname.text])
-        fd = {'locations':locations}  
+        fd = []
+        for par in dom.find("parents").find_all("dsref"):
+            fd.append([par['handle'],par.displayname.text])
+    elif infSet == 'Children':
+        fd = {}
+        for par in dom.find("children").find_all("dsref"):
+            fd.append([get_handle(par['handle']),par.displayname.text])
     elif infSet == 'DocAll':
         fd = read_dcc_doc_data(dom)
     elif infSet == 'VerAll':
@@ -156,6 +158,7 @@ def getProps(s, handle, **kwargs):
     #  Depth - Level to get Collection children information ('0', '1' or 'infinity')
     #       '0' returns information on Collection itself
     #       '1' and 'infinity' return information on Collection content
+    #  InfoSet = Children - Collection Children
     #  InfoSet = Coll - Collection information (See Depth)
     #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
@@ -171,22 +174,24 @@ def getProps(s, handle, **kwargs):
     infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
                 'DocDate': '<getlastmodified/>',
                 'Parents': '<parents/>',
+                'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
-                'Coll' : '<displayname/><summary/><entityowner/><getcontenttype/><parents/>' }
+                'Coll' : '<children/><title/><displayname/><summary/><entityowner/><getcontenttype/><parents/><getlastmodified/>',
+                'Summary' : '<summary/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
     retDom = kwargs.get('RetDom',False)
-    if infoSet == 'Coll':
-        depth = kwargs.get('Depth','0')
-        headers['Depth'] = depth 
+    headers['Depth'] = kwargs.get('Depth','0') 
+    depth = headers['Depth']
     
     if infoSet in infoDic:
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
-        if infoSet == 'Coll' and depth == '0':
-            r = s.post(url,headers=headers)
-        else:
-            r = s.post(url,data=xml,headers=headers)
+        r = s.post(url,data=xml,headers=headers)
+#         if infoSet == 'Coll' and depth == '0':
+#             r = s.post(url,headers=headers)
+#         else:
+#             r = s.post(url,data=xml,headers=headers)
     else:
         r = s.post(url,headers=headers)
 
@@ -309,8 +314,7 @@ def dcc_remove_doc_from_coll(s, handle, coll):
         coll - the parent collection
     """
     # First find other collections where the document exists
-    parent_info = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
-    loc = parent_info['locations']
+    loc = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
     incoll = False  # Flag to check that the document exists in the collection
     target = None # target should contain a valid target collection
     for l in loc:
@@ -402,7 +406,7 @@ def read_dcc_doc_data(dom):
     return(fd)
 
 def print_perm_info(permlist):
-    print("\nPermissions...")
+    print("Permissions...")
     for perm in sorted(permlist, key = lambda x: x["handle"]):
         print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
         if "Search" in perm.keys():
@@ -486,27 +490,31 @@ def get_handle(url):
 
 def print_dcc_coll_data(fd):
     # used for Depth = '0'
-    print("\n\n*** Collection Handle", fd['dccnum'], "***\n")
+    print("\n\n*** Collection Handle", fd['handle'], "***\n")
     print("Title: ", fd['title'])
     print("Summary: ", fd['summary'])
     print("Modified Date: ", fd['modified'])
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
-    print_perm_info(fd['permissions'])
-    
+#     print_perm_info(fd['permissions'])
+
+def print_dcc_coll_parents(fd):   
     print("Parents...")
     for p in fd['parents']:
         print("  [",p[0],"], \"", p[1], "\"", sep = "")
         
+def print_dcc_coll_children(fd):
     print("Children...")
     for c in fd['children']:
         print("  [",c[0],"], \"", c[1], "\"", sep = "")
-
 
 def read_dcc_coll_data(dom):
     # Applies to collection data for Depth = '0'
     fd = {}
     fd['title'] = dom.title.text
-    fd['dccnum'] = get_handle(dom.acl['handle'])
+    fd['dccnum'] = get_handle(dom.response.href.text)
+    fd['handle'] = get_handle(dom.response.href.text)
+#     fd['dccnum'] = get_handle(dom.acl['handle'])
+#     fd['handle'] = get_handle(dom.acl['handle'])
     fd['summary'] = dom.summary.text
     fd['modified'] = dom.getlastmodified.text
     fd['date'] = dom.getlastmodified.text
@@ -514,13 +522,13 @@ def read_dcc_coll_data(dom):
     fd['owner-username'] = dom.entityowner.username.text
     fd['owner-userid'] = dom.entityowner.dsref['handle']
 
-    fd['parents'] = []
-    for par in dom.find("parents").find_all("dsref"):
-        fd['parents'].append([par['handle'],par.displayname.text])
-        
-    fd['children'] = []
-    for par in dom.find("children").find_all("dsref"):
-        fd['children'].append([get_handle(par['handle']),par.displayname.text])
+#     fd['parents'] = []
+#     for par in dom.find("parents").find_all("dsref"):
+#         fd['parents'].append([par['handle'],par.displayname.text])
+#         
+#     fd['children'] = []
+#     for par in dom.find("children").find_all("dsref"):
+#         fd['children'].append([get_handle(par['handle']),par.displayname.text])
 
 #     try:
 #         for par in dom.find_all("parents"):
@@ -528,44 +536,30 @@ def read_dcc_coll_data(dom):
 #     except:
 #         fd['parents'] = [fd['name'][1],'No Parent Exists']
 
-    # Permissions
-    perms = []
-    for p in dom.find_all("ace"):       
-        pentry = {}
-        pentry["handle"] = p.dsref.get('handle')
-        pentry["name"] = p.displayname.text
-        if p.searchers != None:
-            pentry["Search"] = True
-        if p.readers != None:
-            pentry["Read"] = True
-        if p.writers != None:
-            pentry["Write"] = True 
-        if p.managers != None:
-            pentry["Manage"] = True
-        perms.append(pentry)  
-
-    fd["permissions"] = perms
+#     fd["permissions"] = read_dcc_doc_perms(dom)
     return(fd)
    
+def print_coll_info_entry(indent,c):
+    print(" [", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
+    print(indent,"Summary: ", c['summary'], sep = "")
+    print(indent,"Last Modified: ", c['modified'], sep = "")
+    print(indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
+    print(indent,"Parents:", sep = "")
+    for p in c['parents']:
+        print(indent,"  [",p[0],"], \"", p[1], "\"", sep = "")
+
 def print_coll_info(clist):
 # Used for depth of '1' or 'infinity'
     # pprint.pprint(clist)
     idx = 0
     for c in clist:
         if idx == 0:
-            print("\nListing of: [", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
-            print("Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
-            print("Parents:")
-            for p in c['parents']:
-                print("  [",p[0],"], \"", p[1], "\"", sep = "")
+            print("\nListing of: ",sep = "",end="")
+            print_coll_info_entry('',c)
             print("\nContents:")
         else: 
-            print("  ",'%2d' % idx, ": [", c['name'][1], "], \"", c['name'][0],"\"", sep="")
-            print("  Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
-            print("  TMTNum: [", c['tmtnum'], "]", sep = "")
-            print("  Parents:")
-            for p in c['parents']:
-                print("    [",p[0],"], \"", p[1], "\"", sep = "")
+            print("  ",'%2d' % idx, ": ", sep="", end="")
+            print_coll_info_entry('    ',c)
             print("")
         idx += 1
     
@@ -575,8 +569,14 @@ def read_coll_content(dom):
     for res in dom.find_all("response"):
         fd = {}
         fd['name'] = [res.displayname.text, get_handle(res.href.text)]
-        fd['owner'] = [res.entityowner.displayname.text, res.entityowner.username.text,res.entityowner.dsref['handle']]
-        fd['tmtnum'] = res.summary.text
+        fd['title'] = res.displayname.text
+        fd['handle'] = get_handle(res.href.text)
+        fd['owner-name'] = dom.entityowner.displayname.text
+        fd['owner-username'] = dom.entityowner.username.text
+        fd['owner-userid'] = dom.entityowner.dsref['handle']
+        fd['owner'] = [fd['owner-name'], fd['owner-username'], fd['owner-userid']]
+        fd['summary'] = res.summary.text
+        fd['modified'] = dom.getlastmodified.text
         
         fd['parents'] = []
         for par in dom.find("parents").find_all("dsref"):
