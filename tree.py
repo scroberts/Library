@@ -6,24 +6,24 @@
 import DCC
 import config as cf
 
-def print_tree(tree, parent, indent):
-    print(indent+parent)
-    for branch in tree:
-        if branch['parent'] == parent:
-            for col in branch['collections']:
-                print_tree(tree, col, indent+'    ')
-            for doc in branch['documents']:
-                print(indent+'    '+doc) 
-
+def print_tree(tree, key, indent):
+    branch = tree[key]
+    for col in branch['collections']:
+        print(indent+col)
+        print_tree(tree, col, indent+'    ')
+    for doc in branch['documents']:
+        print(indent+doc) 
+    for other in branch['others']:
+        print(indent+other)
         
 
-def build_tree(s, target, tree):
-    fd = DCC.getProps(s, target, InfoSet = 'Coll', Depth = '1')
-
+def build_tree(s, keyname, target, tree):
     documents = []
     collections = []
-    other = []
+    others = []
     dict = {}
+    
+    fd = DCC.getProps(s, target, InfoSet = 'Coll', Depth = '1')
 
     for idx,d in enumerate(fd):
         handle = d['name'][1]
@@ -36,29 +36,39 @@ def build_tree(s, target, tree):
             elif 'Collection' in handle:
                 collections.append(handle)
             else:
-                other.append(handle)
+                others.append(handle)
 
     dict['collections'] = collections
     dict['documents'] = documents
-    dict['other'] = other
+    dict['others'] = others
 
-    print(dict)
-    tree.append(dict)
+    tree[keyname] = dict
     for col in collections:
-        tree = build_tree(s, col, tree)
+        tree = build_tree(s, col, col, tree)
+    return(tree)
+    
+    
+def build_root(collhandle):
+    tree = {}
+    tree['root'] = {'collections' : [collhandle], 'documents' : [], 'others' : []}
     return(tree)
 
-target = 'Collection-286'
+def test_tree():
+    collhandle = 'Collection-10259'
 
-# Login to DCC
-s = DCC.login(cf.dcc_url + cf.dcc_login)
+    # Login to DCC
+    s = DCC.login(cf.dcc_url + cf.dcc_login)
 
-tree = []
-tree = build_tree(s, target, tree)
-
-print_tree(tree, tree[0]['parent'], '')
+    tree = build_tree(s, collhandle, collhandle, build_root(collhandle))
     
-
-
+    print_tree(tree, 'root', '')
+    
+    print('\n\n')
+    for branch in tree:
+        print(branch+': ',tree[branch])
+    
+if __name__ == '__main__':
+    print("Running module test code for",__file__)
+    test_tree()
 
 

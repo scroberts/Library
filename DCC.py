@@ -143,7 +143,7 @@ def scrapeRes(dom, infSet, depth):
     elif infSet == 'VerAll':
         fd = read_dcc_ver_data(dom)        
     elif infSet == 'Coll':
-        if depth == 0:
+        if depth == '0':
             fd = read_dcc_coll_data(dom)
         else:
             fd = read_coll_content(dom)
@@ -169,22 +169,25 @@ def getProps(s, handle, **kwargs):
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
-                'DocDate':'<getlastmodified/>',
-                'Parents':'<parents/>',
-                'Perms':'<private/><acl/>',
+                'DocDate': '<getlastmodified/>',
+                'Parents': '<parents/>',
+                'Perms': '<private/><acl/>',
                 'Coll' : '<displayname/><summary/><entityowner/><getcontenttype/><parents/>' }
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
     retDom = kwargs.get('RetDom',False)
-    depth = kwargs.get('Depth','0')
+    if infoSet == 'Coll':
+        depth = kwargs.get('Depth','0')
+        headers['Depth'] = depth 
     
     if infoSet in infoDic:
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
-        if infoSet == 'Coll':
-            headers['Depth'] = depth     
-        r = s.post(url,data=xml,headers=headers)
-    elif infoSet == 'DocAll' or infoSet == 'VerAll' or infoSet == 'Perms':
+        if infoSet == 'Coll' and depth == '0':
+            r = s.post(url,headers=headers)
+        else:
+            r = s.post(url,data=xml,headers=headers)
+    else:
         r = s.post(url,headers=headers)
 
     if writeRes:
@@ -346,15 +349,7 @@ def download_html(url, cookies, outfile):
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
-    
-    
-def print_dcc_coll_data(fd):
-    print("\n\n*** Collection Handle", fd['dccnum'], "***\n")
-    print("Modified Date: ", fd['modified'])
-    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
-    print("Last Modified: ", fd['date'])
-    print_perm_info(fd['permissions'])
-  
+     
 
 def read_dcc_doc_perms(dom):
     fd = {}
@@ -484,15 +479,54 @@ def get_handle(url):
     handle = url.split('/')[-1]
     handle = fileRegex.sub('Document', handle)
     return(handle)
+    
+################################
+# Collection Read and Print Defs
+################################
+
+def print_dcc_coll_data(fd):
+    # used for Depth = '0'
+    print("\n\n*** Collection Handle", fd['dccnum'], "***\n")
+    print("Title: ", fd['title'])
+    print("Summary: ", fd['summary'])
+    print("Modified Date: ", fd['modified'])
+    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print_perm_info(fd['permissions'])
+    
+    print("Parents...")
+    for p in fd['parents']:
+        print("  [",p[0],"], \"", p[1], "\"", sep = "")
+        
+    print("Children...")
+    for c in fd['children']:
+        print("  [",c[0],"], \"", c[1], "\"", sep = "")
+
 
 def read_dcc_coll_data(dom):
+    # Applies to collection data for Depth = '0'
     fd = {}
+    fd['title'] = dom.title.text
     fd['dccnum'] = get_handle(dom.acl['handle'])
+    fd['summary'] = dom.summary.text
     fd['modified'] = dom.getlastmodified.text
+    fd['date'] = dom.getlastmodified.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
     fd['owner-userid'] = dom.entityowner.dsref['handle']
-    fd['date'] = dom.getlastmodified.text
+
+    fd['parents'] = []
+    for par in dom.find("parents").find_all("dsref"):
+        fd['parents'].append([par['handle'],par.displayname.text])
+        
+    fd['children'] = []
+    for par in dom.find("children").find_all("dsref"):
+        fd['children'].append([get_handle(par['handle']),par.displayname.text])
+
+#     try:
+#         for par in dom.find_all("parents"):
+#             fd['parents'].append([par.dsref['handle'],par.displayname.text])
+#     except:
+#         fd['parents'] = [fd['name'][1],'No Parent Exists']
 
     # Permissions
     perms = []
@@ -512,55 +546,9 @@ def read_dcc_coll_data(dom):
 
     fd["permissions"] = perms
     return(fd)
-
-def file_read_collection(coll):
-    # Reads collection data from a .html file on disk
-    htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
-    fh=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
-    dom = BeautifulSoup(fh)
-    clist = []
-    for res in dom.find_all("response"):
-        fd = {}
-        fd['name'] = [res.displayname.text, get_handle(res.href.text)]
-        fd['owner'] = [res.entityowner.displayname.text, res.entityowner.username.text,res.entityowner.dsref['handle']]
-        fd['tmtnum'] = res.summary.text
-        fd['parents'] = []
-        for par in res.find_all("parents"):
-            fd['parents'].append([par.dsref['handle'],par.displayname.text])
-        clist.append(fd)
-    return(clist)
-
-def read_coll_content(dom):
-    clist = []
-    for res in dom.find_all("response"):
-        fd = {}
-        fd['name'] = [res.displayname.text, get_handle(res.href.text)]
-        fd['owner'] = [res.entityowner.displayname.text, res.entityowner.username.text,res.entityowner.dsref['handle']]
-        fd['tmtnum'] = res.summary.text
-        fd['parents'] = []
-        try:
-            for par in res.find_all("parents"):
-                fd['parents'].append([par.dsref['handle'],par.displayname.text])
-        except:
-            fd['parents'] = [fd['name'][1],'No Parent Exists']
-        clist.append(fd)
-    return(clist)
-    
-def dcc_read_collection(s, coll_handle, **kwargs):
-    # Reads collection data from the DCC
-    dom = dom_prop_find(s, coll_handle, **kwargs)
-
-    clist = read_coll_content(dom)
-    return(clist)
-    
-def dcc_get_coll_handles(s, c_handle, **kwargs):
-    clist = dcc_read_collection(s, c_handle, **kwargs)
-    h = []
-    for c in clist:
-        h.append(c['name'][1])
-    return h    
-        
+   
 def print_coll_info(clist):
+# Used for depth of '1' or 'infinity'
     # pprint.pprint(clist)
     idx = 0
     for c in clist:
@@ -580,7 +568,52 @@ def print_coll_info(clist):
                 print("    [",p[0],"], \"", p[1], "\"", sep = "")
             print("")
         idx += 1
+    
+def read_coll_content(dom):
+# Used for depth of '1' or 'infinity'
+    clist = []
+    for res in dom.find_all("response"):
+        fd = {}
+        fd['name'] = [res.displayname.text, get_handle(res.href.text)]
+        fd['owner'] = [res.entityowner.displayname.text, res.entityowner.username.text,res.entityowner.dsref['handle']]
+        fd['tmtnum'] = res.summary.text
+        
+        fd['parents'] = []
+        for par in dom.find("parents").find_all("dsref"):
+            fd['parents'].append([par['handle'],par.displayname.text])
 
+#         fd['parents'] = []
+#         try:
+#             for par in res.find_all("parents"):
+#                 fd['parents'].append([par.dsref['handle'],par.displayname.text])
+#         except:
+#             fd['parents'] = [fd['name'][1],'No Parent Exists']
+            
+        clist.append(fd)
+    return(clist)
+
+def file_read_collection(coll):
+    # Reads collection data from a .html file on disk
+    htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
+    fh=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
+    dom = BeautifulSoup(fh)
+    clist = read_coll_content(dom)
+    return(clist)
+    
+def dcc_read_collection(s, coll_handle, **kwargs):
+    # Reads collection data from the DCC
+    dom = dom_prop_find(s, coll_handle, **kwargs)
+
+    clist = read_coll_content(dom)
+    return(clist)
+    
+def dcc_get_coll_handles(s, c_handle, **kwargs):
+    clist = dcc_read_collection(s, c_handle, **kwargs)
+    h = []
+    for c in clist:
+        h.append(c['name'][1])
+    return h    
+        
 def check_docs_in_coll(s, dl, cl):
     for c in cl:
         # get the list of documents in the collection

@@ -81,7 +81,7 @@ def checkPerms(target, permissions):
             fd = DCC.getProps(s, doc, InfoSet = 'Coll', Depth = '0', WriteProp = True)
 #             dom = DCC.dom_prop_find_coll(s, doc)
 #             fd = DCC.read_dcc_coll_data(dom)
-            print("\n\n*** Document Entry", fd['dccnum'], "***\n")
+            print("\n\n*** Collection Entry", fd['dccnum'], "***\n")
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
         else:
             sys.exit('Error in checkPerms: not Document or Collection')
