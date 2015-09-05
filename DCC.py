@@ -14,6 +14,7 @@ import time
 
 # my modules
 import config as cf
+import tree
 
 # References for DCC login
 # http://docs.python-requests.org/en/latest/user/quickstart/
@@ -119,16 +120,17 @@ def writeProps(r, fname):
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
-    
+
 def scrapeRes(dom, infSet, depth):
     if infSet == 'DocBasic':
-        title = dom.title.text
-        filename = dom.document.text
-        handle = dom.dsref['handle']
-        author = dom.author
-        date = dom.getlastmodified.text
-        size = int(dom.size.text)
-        fd = {'title':title, 'handle':handle, 'filename':filename, 'date':date, 'size':size}
+        fd = {}
+        fd['title'] = dom.title.text
+        fd['filename'] = dom.document.text
+        fd['handle'] = dom.dsref['handle']
+        fd['author'] = dom.author
+        fd['date'] = dom.getlastmodified.text
+        fd['size'] = int(dom.size.text)
+        fd['tmtnum'] = dom.summary.text
     elif infSet == 'DocDate':
         date = dom.getlastmodified.text
         fd = {'date':date}
@@ -137,7 +139,7 @@ def scrapeRes(dom, infSet, depth):
         for par in dom.find("parents").find_all("dsref"):
             fd.append([par['handle'],par.displayname.text])
     elif infSet == 'Children':
-        fd = {}
+        fd = []
         for par in dom.find("children").find_all("dsref"):
             fd.append([get_handle(par['handle']),par.displayname.text])
     elif infSet == 'DocAll':
@@ -171,7 +173,7 @@ def getProps(s, handle, **kwargs):
     
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/>',
+    infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/><summary/>',
                 'DocDate': '<getlastmodified/>',
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
@@ -182,8 +184,8 @@ def getProps(s, handle, **kwargs):
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
     retDom = kwargs.get('RetDom',False)
-    headers['Depth'] = kwargs.get('Depth','0') 
-    depth = headers['Depth']
+    depth = kwargs.get('Depth','0') 
+    headers['Depth'] = depth
     
     if infoSet in infoDic:
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
@@ -205,9 +207,10 @@ def getProps(s, handle, **kwargs):
 
     
 def get_collections_in_collection(s, coll, **kwargs):
-    c_handles = dcc_get_coll_handles(s, coll, **kwargs)
-    colllist = []
     pflag = kwargs.get('Print', True)
+    c_handles = dcc_get_coll_handles(s, coll, **kwargs)
+        
+    colllist = []
 
     for c in c_handles:
         if 'Collection-' in c:
@@ -272,7 +275,7 @@ def prop_find(s, target, **kwargs):
         xml = """<?xml version="1.0" ?>
             <propfind>
                 <prop>
-                    <displayname/><summary/><entityowner/><getcontenttype/><parents/> 
+                    <title/><getlastmodified/><displayname/><summary/><entityowner/><getcontenttype/><parents/> 
                 </prop>
             </propfind>"""     
         r = s.post(url,data=xml,headers=headers)  # Gets limited data
@@ -578,10 +581,10 @@ def read_coll_content(dom):
         fd['summary'] = res.summary.text
         fd['modified'] = dom.getlastmodified.text
         
-        fd['parents'] = []
-        for par in dom.find("parents").find_all("dsref"):
-            fd['parents'].append([par['handle'],par.displayname.text])
-
+#         fd['parents'] = []
+#         for par in dom.find("parents").find_all("dsref"):
+#             fd['parents'].append([par['handle'],par.displayname.text])
+# 
 #         fd['parents'] = []
 #         try:
 #             for par in res.find_all("parents"):
@@ -744,8 +747,6 @@ def testTraverse():
     traverse(s, coll, SaveFiles = True, MaxFileSize = 10000)
     
 
-    
-    
 def testGetColl():
     # Login to DCC
     s = login(cf.dcc_url + cf.dcc_login)
