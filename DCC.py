@@ -641,111 +641,8 @@ def mkCol(s,parentColl, collName, collDesc):
     
     r = s.post(url,data=xml,headers=headers)  # Gets limited data
     
-#     print(xml)
-#     print("Status Code:", r.status_code)
-#     print('headers:\n', r.headers)
-#     print('collection = ',handle)
-#     print('r.text:\n',r.text)
-
     handle = r.headers['docushare-handle']
-    return(handle)
-                
-
-def traverse(s, coll, dirpath = './', indent = '', **kwargs):
-    # traverse follows the collection structure on the DCC and replicates it on the local disk
-    pflag = False
-    savefiles = kwargs.get('SaveFiles', False)
-    exclude = kwargs.get('Exclude', [])        
-    maxfilesize = kwargs.get('MaxFileSize', sys.maxsize)
-        
-    collist = get_collections_in_collection(s, coll, Depth = '1', Print = pflag)
-    doclist = get_files_in_collection(s, coll, Depth = '1', Print = pflag)
-    cinfo = dcc_read_collection(s, coll, Depth = '0')
-    print(indent,'Files in ', coll, ': ', cinfo[0]['name'][0])
-    colname = cinfo[0]['name'][0]
-    colname = colname.replace('/',' ')
-    dirpath = dirpath + colname + '/' 
-    if savefiles:
-        try:
-            os.stat(dirpath)
-        except:
-            os.mkdir(dirpath) 
-    for doc in doclist:
-        finfo = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
-        print(indent + '\t',doc)
-        print(indent + '\t\tTitle: ',finfo['title'])
-        print(indent + '\t\tFileName: ',finfo['filename'],' [',finfo['date'],']' ,' [', finfo['size'],' bytes ]')
-        filedirpath = dirpath + finfo.get('title').replace('/',' ') + '/'
-        filename = finfo.get('filename')
-        if savefiles:
-            try:
-                os.stat(filedirpath)
-            except:
-                os.mkdir(filedirpath)
-        if not os.path.isfile(filedirpath+filename):
-            print(indent + "\t\t\tFile doesn't exist")
-            if savefiles:
-                if finfo['size'] < maxfilesize:
-                    print(indent + "\t\t\tGetting file")
-                    get_file(s, doc, filedirpath, finfo['filename'])
-                else:
-                    print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
-            else:
-                print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
-
-
-        elif (datetime.strptime(finfo['date'],'%a, %d %b %Y %H:%M:%S %Z') - datetime(1970,1,1)).total_seconds() > os.path.getctime(filedirpath+filename):
-            print(indent + "\t\t\tFile exists, but is out of date:", time.ctime(os.path.getctime(filedirpath+filename)))
-            if savefiles:
-                if finfo['size'] < maxfilesize:
-                    print(indent + "\t\t\tGetting updated file")
-                    get_file(s, doc, filedirpath, finfo['filename'])
-                else:
-                    print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
-            else:
-                print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
-        else:
-            print(indent + "\t\t\tFile exists, created:", time.ctime(os.path.getctime(filedirpath+filename)))
-
-    for c in collist:
-        if (not c == coll) and (not c in exclude):
-            traverse(s, c, dirpath, indent + '\t', **kwargs)
-            
-def testTraverse():        
-#     coll = 'Collection-10725'
-#     dirpath = r'/Users/sroberts/Box Sync/TMT DCC Files/M1CS/'
-#     exclude = ['Collection-10836', 'Collection-10837']
-#     
-#     coll = 'Collection-8277'
-#     dirpath = r'/Users/sroberts/Box Sync/TMT DCC Files/Configuration Control/'
-
-
-    
-#     exclude = [
-#         'Collection-9908', 
-#         'Collection-10023', 'Collection-10026', 'Collection-10025', 
-#         'Collection-10024', 'Collection-9895', 'Collection-8288', 
-#         'Collection-8279', 'Collection-10582', 'Collection-8278', 
-#         'Collection-9889', 'Collection-8711', 'Collection-8283',  
-#         'Collection-9628', 'Collection-8280', 'Collection-8282', 
-#         'Collection-8281'
-#         ]
-
-#     dir = os.path.dirname(dirpath)
-#     print(dir)
-# 
-#     try:
-#         os.stat(dir)
-#     except:
-#         os.mkdir(dir)  
-
-    # Login to DCC
-    s = login(cf.dcc_url + cf.dcc_login)
-
-#     traverse(s, coll, dirpath, SaveFiles = True, Exclude = exclude, MaxFileSize = 20000000)
-    coll = 'Collection-2676'    
-    traverse(s, coll, SaveFiles = True, MaxFileSize = 10000)
-    
+    return(handle)             
 
 def testGetColl():
     # Login to DCC
@@ -783,10 +680,10 @@ def testGetProps():
 if __name__ == '__main__':
     print("Running module test code for",__file__)
 
-    testGetProps()
+#     testGetProps()
 #     testGetBasicInfo()
 #     testTraverse()
-#     testGetColl()
+    testGetColl()
 
 
 

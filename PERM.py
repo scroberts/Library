@@ -61,10 +61,6 @@ def checkPerms(target, permissions):
     s = DCC.login(cf.dcc_url + cf.dcc_login)
 
     if 'Collection' in target:
-#         docList = [target]
-#         docList = docList + DCC.get_files_in_collection(s, target)
-#         docList = docList + DCC.get_collections_in_collection(s, target)
-#         print(docList)
         tr = tree.get_tree(s,target)
         tree.print_tree(tr)
         docList = tree.get_flat_tree(tr)
@@ -79,8 +75,6 @@ def checkPerms(target, permissions):
     for doc in docList:
         checkFlag = True
         if 'Document' in doc:
-#             dom = DCC.dom_prop_find(s, doc)
-#             fd = DCC.read_dcc_doc_data(dom)
             fd = DCC.getProps(s, doc, InfoSet = 'DocBasic', WriteProp = True)
             fd['permissions'] = DCC.getProps(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
     
@@ -91,8 +85,6 @@ def checkPerms(target, permissions):
         elif 'Collection' in doc:
             fd = DCC.getProps(s, doc, InfoSet = 'Coll', Depth = '0', WriteProp = True)
             fd['permissions'] = DCC.getProps(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
-#             dom = DCC.dom_prop_find_coll(s, doc)
-#             fd = DCC.read_dcc_coll_data(dom)
             print("\n\n*** Collection Entry", fd['dccnum'], "***")
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
         else:
