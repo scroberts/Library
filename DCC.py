@@ -248,13 +248,15 @@ def prop_get(s, handle, **kwargs):
     
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    infoDic = { 'DocBasic':'<title/><handle/><document/><getlastmodified/><size/><summary/>',
+    infoDic = { 'DocBasic':'<handle/><document/><getlastmodified/><size/><summary/>',
                 'DocDate': '<getlastmodified/>',
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
                 'Coll' : '<children/><title/><displayname/><summary/><entityowner/><getcontenttype/><parents/><getlastmodified/>',
-                'Summary' : '<summary/>'}
+                'Summary' : '<summary/>',
+                'DocAll' : '<title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><acl/><getlastmodified/><summary/><parents/><versions/>',
+                'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     writeRes = kwargs.get('WriteProp', True)
@@ -266,6 +268,7 @@ def prop_get(s, handle, **kwargs):
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
         r = s.post(url,data=xml,headers=headers)
     else:
+        print('Calling without XML')
         r = s.post(url,headers=headers)
 
     if writeRes:
@@ -279,7 +282,8 @@ def prop_get(s, handle, **kwargs):
 def prop_scrape(dom, infSet, depth):
     if infSet == 'DocBasic':
         fd = {}
-        fd['title'] = dom.title.text
+#         fd['title'] = dom.title.text
+        fd['title'] = dom.displayname.text
         fd['filename'] = dom.document.text
         fd['handle'] = dom.dsref['handle']
         fd['author'] = dom.author
@@ -358,7 +362,7 @@ def print_doc_basic_info(fd):
     print("DCC Date: ", fd['date'])
     print("Size: ", fd['size'])
     
-def print_doc_info(fd):
+def print_doc_data(fd):
     print("\n\n*** Document Entry", fd['dccnum'], "***\n")
     print("TMT Document Number: ", fd['tmtnum'])
     print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")

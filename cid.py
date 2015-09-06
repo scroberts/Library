@@ -194,7 +194,7 @@ def gen_ss_cid(s, dl):
             ssrow.append(prefver['vercomment'])
             ssrow.append(prefver['owner-username'])
             ssrow.append(prefver['date'])            
-            DCC.print_doc_info(doc)
+            DCC.print_doc_data(doc)
             DCC.print_ver_info(prefver)
             print(doc['dccnum'], doc['dccname'], doc['tmtnum'], doc['owner-username'])
             print("Doc Ref")
@@ -220,7 +220,7 @@ def gen_ss_cid(s, dl):
                 print("Referenced Version IS the Preferred Version")
                 # Evaluation of current reference
                 ssrow.append('Pref. Ver.') 
-                DCC.print_doc_info(doc)
+                DCC.print_doc_data(doc)
                 DCC.print_ver_info(prefver)
                 # Current reference
                 ssrow.append(prefver['dccver'])
@@ -233,7 +233,7 @@ def gen_ss_cid(s, dl):
                 ssrow.append('Non-Pref. Ver.') 
                 print("Non-Preferred Version")
                 print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])    
-                DCC.print_doc_info(doc)
+                DCC.print_doc_data(doc)
                 DCC.print_ver_info(ver)  
                 DCC.print_ver_info(prefver) 
                 # Current reference
