@@ -121,7 +121,7 @@ def writeProps(r, fname):
         webfile.write(chunk)
     webfile.close
 
-def scrapeRes(dom, infSet, depth):
+def scrape_prop(dom, infSet, depth):
     if infSet == 'DocBasic':
         fd = {}
         fd['title'] = dom.title.text
@@ -202,7 +202,7 @@ def get_prop(s, handle, **kwargs):
     dom = BeautifulSoup(r.text)
     if retDom:
         return(dom)
-    fd = scrapeRes(dom, infoSet, depth)
+    fd = scrape_prop(dom, infoSet, depth)
     return(fd)
 
 def list_obj_in_coll(s, collhandle, **kwargs):
