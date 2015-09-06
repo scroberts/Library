@@ -240,45 +240,6 @@ def list_obj_in_coll(s, collhandle, **kwargs):
         fh.close()
     return(objlist)
       
-def prop_find(s, target, **kwargs):
-    # POST /dscgi/ds.py/PROPFIND/Collection-49 HTTP/1.1
-    # Host: docushare.xerox.com
-    # Accept: text/xml
-    # Content-Type: text/xml
-    # Content-Length: xxxx
-    #
-    # A client may submit a Depth header with a value of "0", "1", or
-    # "infinity". The depth input only applies to container objects
-    # and will be ignored when given for non-container objects.
-    # Clients should not supply a depth for non-container objects. The
-    # depth value indicates whether the request is to be applied only
-    # to the object identified by <handle> (depth=0), to the object
-    # and its immediate children (depth=1), or to the object and all
-    # its progeny (depth=infinity). When a depth value is not
-    # provided, a value of inifinity will be assumed.
-    
-    url = cf.dcc_url + "/dsweb/PROPFIND/" + target
-    # See if it is a collection
-    if 'Collection' in url:
-        try:
-            depth = kwargs.get('Depth')
-            headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":depth} 
-        except:    
-            headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"infinity"}
-            
-        xml = """<?xml version="1.0" ?>
-            <propfind>
-                <prop>
-                    <title/><getlastmodified/><displayname/><summary/><entityowner/><getcontenttype/><parents/> 
-                </prop>
-            </propfind>"""     
-        r = s.post(url,data=xml,headers=headers)  # Gets limited data
-    # Otherwise it's a Version or a Document and we don't use the xml string
-    else: 
-        headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-        r = s.post(url,headers=headers)     # Gets all data
-    return(r)
-    
 def dcc_move(s, handle, source, dest):
     # Syntax:	MOVE / <handle>
     # HTTP Method:	POST
