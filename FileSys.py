@@ -5,11 +5,25 @@ import os
 import sys
 from datetime import datetime
 import time
+import json
 
 # my modules
 import DCC
 import config as cf
 import tree
+
+def file_write_json(obj, fname, path = './'):
+    if not '.json' in fname:
+        fname = fname + '.json'
+    fh = open(path+fname,'w')
+    json.dump(obj, fh)
+    fh.close()
+    
+def file_read_json(fname, path = './'):
+    print('fname = ', fname)
+    fh = open(path+fname,'r')
+    obj = fson.load(fh)
+    fh.close
 
 def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     # traverse follows the collection structure on the DCC and replicates it on the local disk
@@ -22,7 +36,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     collist = branch['collections']
     doclist = branch['documents']
         
-    cinfo = DCC.prop_get(s, collkey, InfoSet = 'Coll', Depth = '0', WriteProp = True)
+    cinfo = DCC.prop_get(s, collkey, InfoSet = 'CollData', WriteProp = True)
     print(indent,'Files in ', collkey, ': ', cinfo['title'])
     colname = cinfo['title']
     colname = colname.replace('/',' ')

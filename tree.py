@@ -35,7 +35,7 @@ def build_tree(s, keyname, target, tree):
     others = []
     dict = {}
     
-    fd = DCC.prop_get(s, target, InfoSet = 'Coll', Depth = '1')
+    fd = DCC.prop_get(s, target, InfoSet = 'CollCont', Depth = '1')
 
     for idx,d in enumerate(fd):
         handle = d['name'][1]

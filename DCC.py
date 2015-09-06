@@ -15,6 +15,7 @@ import time
 # my modules
 import config as cf
 import tree
+import FileSys
 
 # References for DCC login
 # http://docs.python-requests.org/en/latest/user/quickstart/
@@ -130,7 +131,9 @@ def file_read_collection(coll):
     return(clist)
     
 def file_write_props(r, fname):
-    webfile = open(cf.dccfilepath + fname +".html",'wb')
+    if not '.html' in fname:
+        fname = fname + '.html'
+    webfile = open(cf.dccfilepath + fname,'wb')
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
@@ -168,7 +171,7 @@ def list_obj_in_coll(s, collhandle, **kwargs):
     else:
         sys.exit('type not found')
 
-    fd = prop_get(s, collhandle, InfoSet = 'Coll', Depth = depth, WriteProp = writeprop)
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = depth, WriteProp = writeprop)
     objlist = []
     for f in fd:
         if type_filter in f['handle']:
@@ -236,7 +239,8 @@ def prop_get(s, handle, **kwargs):
     #       '0' returns information on Collection itself
     #       '1' and 'infinity' return information on Collection content
     #  InfoSet = Children - Collection Children
-    #  InfoSet = Coll - Collection information (See Depth)
+    #  InfoSet = CollData - Information about Collection
+    #  InfoSet = CollCont - Information about Collection Content (See Depth) 
     #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
     #  InfoSet = DocDate - Document last modified date
@@ -253,7 +257,8 @@ def prop_get(s, handle, **kwargs):
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
-                'Coll' : '<children/><title/><displayname/><summary/><entityowner/><getcontenttype/><parents/><getlastmodified/>',
+                'CollData' : '<title/><summary/><entityowner/><getlastmodified/>',
+                'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',
                 'Summary' : '<summary/>',
                 'DocAll' : '<title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><acl/><getlastmodified/><summary/><parents/><versions/>',
                 'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
@@ -264,6 +269,11 @@ def prop_get(s, handle, **kwargs):
     depth = kwargs.get('Depth','0') 
     headers['Depth'] = depth
     
+    if infoSet == 'CollCont':
+        froot = handle + '_' + infoSet + depth
+    else:
+        froot = handle + '_' + infoSet
+    
     if infoSet in infoDic:
         xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
         r = s.post(url,data=xml,headers=headers)
@@ -272,17 +282,19 @@ def prop_get(s, handle, **kwargs):
         r = s.post(url,headers=headers)
 
     if writeRes:
-        file_write_props(r, handle + '_' + infoSet)
+        file_write_props(r, froot)
+        
     dom = BeautifulSoup(r.text)
     if retDom:
         return(dom)
     fd = prop_scrape(dom, infoSet, depth)
+    FileSys.file_write_json(fd, froot, cf.dccfilepath)
+    
     return(fd)
     
 def prop_scrape(dom, infSet, depth):
     if infSet == 'DocBasic':
         fd = {}
-#         fd['title'] = dom.title.text
         fd['title'] = dom.displayname.text
         fd['filename'] = dom.document.text
         fd['handle'] = dom.dsref['handle']
@@ -304,19 +316,18 @@ def prop_scrape(dom, infSet, depth):
     elif infSet == 'DocAll':
         fd = read_doc_data(dom)
     elif infSet == 'VerAll':
-        fd = read_ver_data(dom)        
-    elif infSet == 'Coll':
-        if depth == '0':
-            fd = read_coll_data(dom)
-        else:
-            fd = read_coll_content(dom)
+        fd = read_ver_data(dom)   
+    elif infSet == 'CollData':
+        fd = read_coll_data(dom)
+    elif infSet == 'CollCont':     
+        fd = read_coll_content(dom)
     elif infSet == 'Perms':
         fd = read_doc_perms(dom)
     return(fd) 
     
 def print_coll_children(fd):
     print("Children...")
-    for c in fd['children']:
+    for c in fd:
         print("  [",c[0],"], \"", c[1], "\"", sep = "")
 
 def print_coll_data(fd):
@@ -347,13 +358,10 @@ def print_coll_info_entry(indent,c):
     print(indent,"Summary: ", c['summary'], sep = "")
     print(indent,"Last Modified: ", c['modified'], sep = "")
     print(indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
-    print(indent,"Parents:", sep = "")
-    for p in c['parents']:
-        print(indent,"  [",p[0],"], \"", p[1], "\"", sep = "")
     
 def print_coll_parents(fd):   
     print("Parents...")
-    for p in fd['parents']:
+    for p in fd:
         print("  [",p[0],"], \"", p[1], "\"", sep = "")
 
 def print_doc_basic_info(fd):    
@@ -411,8 +419,8 @@ def read_coll_content(dom):
     clist = []
     for res in dom.find_all("response"):
         fd = {}
-        fd['name'] = [res.displayname.text, get_handle(res.href.text)]
-        fd['title'] = res.displayname.text
+        fd['name'] = [res.title.text, get_handle(res.href.text)]
+        fd['title'] = res.title.text
         fd['handle'] = get_handle(res.href.text)
         fd['owner-name'] = dom.entityowner.displayname.text
         fd['owner-username'] = dom.entityowner.username.text
