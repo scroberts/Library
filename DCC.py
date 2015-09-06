@@ -155,7 +155,7 @@ def scrapeRes(dom, infSet, depth):
         fd = read_dcc_doc_perms(dom)
     return(fd)    
     
-def getProps(s, handle, **kwargs):
+def get_prop(s, handle, **kwargs):
     # kwargs options:
     #  Depth - Level to get Collection children information ('0', '1' or 'infinity')
     #       '0' returns information on Collection itself
@@ -224,7 +224,7 @@ def list_obj_in_coll(s, collhandle, **kwargs):
     else:
         sys.exit('type not found')
 
-    fd = getProps(s, collhandle, InfoSet = 'Coll', Depth = depth, WriteProp = writeprop)
+    fd = get_prop(s, collhandle, InfoSet = 'Coll', Depth = depth, WriteProp = writeprop)
     objlist = []
     for f in fd:
         if type_filter in f['handle']:
@@ -262,7 +262,7 @@ def dcc_remove_doc_from_coll(s, handle, coll):
         coll - the parent collection
     """
     # First find other collections where the document exists
-    loc = getProps(s, handle, InfoSet = 'Parents', WriteProp = True)
+    loc = get_prop(s, handle, InfoSet = 'Parents', WriteProp = True)
     incoll = False  # Flag to check that the document exists in the collection
     target = None # target should contain a valid target collection
     for l in loc:

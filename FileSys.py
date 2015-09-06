@@ -22,7 +22,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     collist = branch['collections']
     doclist = branch['documents']
         
-    cinfo = DCC.getProps(s, collkey, InfoSet = 'Coll', Depth = '0', WriteProp = True)
+    cinfo = DCC.get_prop(s, collkey, InfoSet = 'Coll', Depth = '0', WriteProp = True)
     print(indent,'Files in ', collkey, ': ', cinfo['title'])
     colname = cinfo['title']
     colname = colname.replace('/',' ')
@@ -33,7 +33,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
         except:
             os.mkdir(dirpath) 
     for doc in doclist:
-        finfo = DCC.getProps(s, doc, InfoSet = 'DocBasic', WriteProp = True)
+        finfo = DCC.get_prop(s, doc, InfoSet = 'DocBasic', WriteProp = True)
         print(indent + '\t',doc)
         print(indent + '\t\tTitle: ',finfo['title'])
         print(indent + '\t\tFileName: ',finfo['filename'],' [',finfo['date'],']' ,' [', finfo['size'],' bytes ]')
