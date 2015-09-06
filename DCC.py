@@ -205,7 +205,43 @@ def getProps(s, handle, **kwargs):
     fd = scrapeRes(dom, infoSet, depth)
     return(fd)
 
+  
+
+def list_obj_in_coll(s, collhandle, **kwargs):
+    pflag = kwargs.get('Print', False)
+    jflag = kwargs.get('Jwrite',False)
+    depth = kwargs.get('Depth','infinity')
+    type = kwargs.get('Type','Doc')
+    writeprop = kwargs.get('WriteProp',False)
     
+    if type == 'Doc':
+        type_filter = 'Document-'
+        file_ext = '_docs_' + depth + '.txt'
+    elif type == 'Coll':
+        type_filter = 'Collection-'
+        file_ext = '_colls' + depth + '.txt'
+    elif type == 'All':
+        type_filter = '-'
+        file_ext = '_allobjs' + depth + '.txt'
+    else:
+        sys.exit('type not found')
+
+    fd = getProps(s, collhandle, InfoSet = 'Coll', Depth = depth, WriteProp = writeprop)
+    objlist = []
+    for f in fd:
+        if type_filter in f['handle']:
+            objlist.append(f['handle'])
+            if pflag:
+                print('Selected: ',f['handle'])
+        else:
+            if pflag:
+                print('Other: ',f['handle'])
+    if jflag:
+        fh = open(cf.dccfilepath + collhandle + file_ext,'w')
+        json.dump(objlist, fh)
+        fh.close()
+    return(objlist)
+ 
 def get_collections_in_collection(s, coll, **kwargs):
     pflag = kwargs.get('Print', True)
     c_handles = dcc_get_coll_handles(s, coll, **kwargs)
@@ -223,29 +259,27 @@ def get_collections_in_collection(s, coll, **kwargs):
     fh = open(cf.dccfilepath + coll + '_colls.txt','w')
     json.dump(colllist, fh)
     fh.close()
-    return colllist    
-    
-def get_files_in_collection(s, coll, **kwargs):
-    c_handles = dcc_get_coll_handles(s, coll, **kwargs)
+    return colllist  
+       
+def get_files_in_collection(s, collhandle, **kwargs):
+    pflag = kwargs.get('Print', False)
+    jflag = kwargs.get('Jwrite',False)
+    fd = getProps(s, collhandle, InfoSet = 'Coll', Depth = 'infinity', WriteProp = False)
     doclist = []
-    try:
-        pflag = kwargs.get('Print')
-    except:
-        pflag = True
-    for c in c_handles:
-        if 'Document-' in c:
+    for f in fd:
+        if 'Document-' in f['handle']:
+            doclist.append(f['handle'])
             if pflag:
-                print('Document: ', c) 
-            doclist.append(c)
+                print('Document: ',f['handle'])
         else:
             if pflag:
-                print('Other: ', c)
-    fh = open(cf.dccfilepath + coll + '_docs.txt','w')
-    json.dump(doclist, fh)
-    fh.close()
-    return doclist
-
-
+                print('Other: ',f['handle'])
+    if jflag:
+        fh = open(cf.dccfilepath + collhandle + '_docs.txt','w')
+        json.dump(doclist, fh)
+        fh.close()
+    return(doclist)
+    
 def prop_find(s, target, **kwargs):
     # POST /dscgi/ds.py/PROPFIND/Collection-49 HTTP/1.1
     # Host: docushare.xerox.com
