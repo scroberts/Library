@@ -75,16 +75,16 @@ def checkPerms(target, permissions):
     for doc in docList:
         checkFlag = True
         if 'Document' in doc:
-            fd = DCC.get_prop(s, doc, InfoSet = 'DocBasic', WriteProp = True)
-            fd['permissions'] = DCC.get_prop(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
+            fd = DCC.prop_get(s, doc, InfoSet = 'DocBasic', WriteProp = True)
+            fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
     
             print("\n\n*** Document Entry", fd['handle'], "***")
             print("DCC Name: \"",fd['title'],"\"",sep="")
             print("TMT Document Number: ", fd['tmtnum'])
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['handle'] + "/view")
         elif 'Collection' in doc:
-            fd = DCC.get_prop(s, doc, InfoSet = 'Coll', Depth = '0', WriteProp = True)
-            fd['permissions'] = DCC.get_prop(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
+            fd = DCC.prop_get(s, doc, InfoSet = 'Coll', Depth = '0', WriteProp = True)
+            fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
             print("\n\n*** Collection Entry", fd['dccnum'], "***")
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
         else:
