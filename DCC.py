@@ -240,25 +240,6 @@ def list_obj_in_coll(s, collhandle, **kwargs):
         fh.close()
     return(objlist)
       
-def get_files_in_collection(s, collhandle, **kwargs):
-    pflag = kwargs.get('Print', False)
-    jflag = kwargs.get('Jwrite',False)
-    fd = getProps(s, collhandle, InfoSet = 'Coll', Depth = 'infinity', WriteProp = False)
-    doclist = []
-    for f in fd:
-        if 'Document-' in f['handle']:
-            doclist.append(f['handle'])
-            if pflag:
-                print('Document: ',f['handle'])
-        else:
-            if pflag:
-                print('Other: ',f['handle'])
-    if jflag:
-        fh = open(cf.dccfilepath + collhandle + '_docs.txt','w')
-        json.dump(doclist, fh)
-        fh.close()
-    return(doclist)
-    
 def prop_find(s, target, **kwargs):
     # POST /dscgi/ds.py/PROPFIND/Collection-49 HTTP/1.1
     # Host: docushare.xerox.com
@@ -634,7 +615,6 @@ def check_docs_in_coll(s, dl, cl):
     for c in cl:
         # get the list of documents in the collection
         
-#         cdl = get_files_in_collection(s, c)
         cdl = list_obj_in_coll(s,c,Print=True,Jwrite=False,Depth='infinity',Type='Doc',WriteProp=False)
 
         for d in dl:
