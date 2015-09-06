@@ -102,19 +102,18 @@ def dcc_remove_doc_from_coll(s, handle, coll):
     else:
         print('Failed to remove ', handle, ' from ', coll)
     
-def download_file(s, handle, targetpath, filename):
+def file_download(s, handle, targetpath, filename):
     # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
     url = cf.dcc_url + "/dsweb/GET/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     r = s.post(url,headers=headers) 
-#     print(r.headers)
     file = open(targetpath + filename,'wb')
     for chunk in r.iter_content(100000):
         file.write(chunk)
     file.close
     return(r) 
     
-def download_html(url, cookies, outfile):
+def file_download_html(url, cookies, outfile):
     # Writes html from url to outfile
     r = requests.get(url, cookies = cookies)
     webfile = open(cf.dccfilepath + outfile,'wb')
@@ -129,6 +128,12 @@ def file_read_collection(coll):
     dom = BeautifulSoup(fh)
     clist = read_coll_content(dom)
     return(clist)
+    
+def file_write_props(r, fname):
+    webfile = open(cf.dccfilepath + fname +".html",'wb')
+    for chunk in r.iter_content(100000):
+        webfile.write(chunk)
+    webfile.close
     
 def get_handle(url):
     #  Takes url such as 'https://docushare.tmt.org:443/File-501', returns 'Document-501'
@@ -264,7 +269,7 @@ def prop_get(s, handle, **kwargs):
         r = s.post(url,headers=headers)
 
     if writeRes:
-        write_props(r, handle + '_' + infoSet)
+        file_write_props(r, handle + '_' + infoSet)
     dom = BeautifulSoup(r.text)
     if retDom:
         return(dom)
@@ -521,13 +526,6 @@ def set_permissions(s,handle,fd):
     xml += '''</acl></prop></set></propertyupdate>'''
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
-
-    
-def write_props(r, fname):
-    webfile = open(cf.dccfilepath + fname +".html",'wb')
-    for chunk in r.iter_content(100000):
-        webfile.write(chunk)
-    webfile.close
 
              
 if __name__ == '__main__':

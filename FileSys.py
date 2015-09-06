@@ -49,7 +49,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
             if savefiles:
                 if finfo['size'] < maxfilesize:
                     print(indent + "\t\t\tGetting file")
-                    DCC.download_file(s, doc, filedirpath, finfo['filename'])
+                    DCC.file_download(s, doc, filedirpath, finfo['filename'])
                 else:
                     print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
             else:
@@ -61,7 +61,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
             if savefiles:
                 if finfo['size'] < maxfilesize:
                     print(indent + "\t\t\tGetting updated file")
-                    download_file(s, doc, filedirpath, finfo['filename'])
+                    DCC.file_download(s, doc, filedirpath, finfo['filename'])
                 else:
                     print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
             else:
