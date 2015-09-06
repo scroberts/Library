@@ -314,7 +314,8 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
     ## Remove the files that are currently located in the collection for the CID
 
     if myutil.get_yn('Remove location (not delete) of files from ' + CID_coll[0] +'(Y/N)?: '):
-        doclist = DCC.get_files_in_collection(s, CID_coll[0])
+#         doclist = DCC.get_files_in_collection(s, CID_coll[0])
+        doclist = DCC.list_obj_in_coll(s, CID_coll[0],Print=True,Jwrite=False,Depth='infinity',Type='Doc',WriteProp=False)
         for doc in doclist:
             DCC.dcc_remove_doc_from_coll(s, doc, CID_coll[0])
 

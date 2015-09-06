@@ -21,12 +21,8 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     branch = tr[collkey]
     collist = branch['collections']
     doclist = branch['documents']
-    
-#     collist = get_collections_in_collection(s, coll, Depth = '1', Print = pflag)
-#     doclist = get_files_in_collection(s, coll, Depth = '1', Print = pflag)
-    
+        
     cinfo = DCC.getProps(s, collkey, InfoSet = 'Coll', Depth = '0', WriteProp = True)
-#     cinfo = dcc_read_collection(s, coll, Depth = '0')
     print(indent,'Files in ', collkey, ': ', cinfo['title'])
     colname = cinfo['title']
     colname = colname.replace('/',' ')

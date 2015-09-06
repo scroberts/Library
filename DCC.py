@@ -205,8 +205,6 @@ def getProps(s, handle, **kwargs):
     fd = scrapeRes(dom, infoSet, depth)
     return(fd)
 
-  
-
 def list_obj_in_coll(s, collhandle, **kwargs):
     pflag = kwargs.get('Print', False)
     jflag = kwargs.get('Jwrite',False)
@@ -241,26 +239,7 @@ def list_obj_in_coll(s, collhandle, **kwargs):
         json.dump(objlist, fh)
         fh.close()
     return(objlist)
- 
-def get_collections_in_collection(s, coll, **kwargs):
-    pflag = kwargs.get('Print', True)
-    c_handles = dcc_get_coll_handles(s, coll, **kwargs)
-        
-    colllist = []
-
-    for c in c_handles:
-        if 'Collection-' in c:
-            if pflag:
-                print('Collection: ', c) 
-            colllist.append(c)
-        else:
-            if pflag:
-                print('Other: ', c)
-    fh = open(cf.dccfilepath + coll + '_colls.txt','w')
-    json.dump(colllist, fh)
-    fh.close()
-    return colllist  
-       
+      
 def get_files_in_collection(s, collhandle, **kwargs):
     pflag = kwargs.get('Print', False)
     jflag = kwargs.get('Jwrite',False)
@@ -654,7 +633,10 @@ def dcc_get_coll_handles(s, c_handle, **kwargs):
 def check_docs_in_coll(s, dl, cl):
     for c in cl:
         # get the list of documents in the collection
-        cdl = get_files_in_collection(s, c)
+        
+#         cdl = get_files_in_collection(s, c)
+        cdl = list_obj_in_coll(s,c,Print=True,Jwrite=False,Depth='infinity',Type='Doc',WriteProp=False)
+
         for d in dl:
             #  print('testing ', d, ' in ', cdl)
             if not d in cdl:
@@ -677,18 +659,6 @@ def mkCol(s,parentColl, collName, collDesc):
     
     handle = r.headers['docushare-handle']
     return(handle)             
-
-def testGetColl():
-    # Login to DCC
-    s = login(cf.dcc_url + cf.dcc_login)
-    
-    coll = 'Collection-8277'
-    clist = get_collections_in_collection(s, coll, Depth = '1')
-    print(clist)
-    
-    handle = 'Document-2688'
-    info = getProps(s, handle, InfoSet = 'DocBasic', WriteProp = True)
-    print(info)
 
 def testGetProps():
     # Login to DCC
