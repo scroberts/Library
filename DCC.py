@@ -279,16 +279,6 @@ def prop_find(s, target, **kwargs):
         r = s.post(url,headers=headers)     # Gets all data
     return(r)
     
-def dom_prop_find(s, target, **kwargs):
-    r = prop_find(s, target, **kwargs)
-    # Need to add flag to turn on / off writing to file
-    webfile = open(cf.dccfilepath + target+".html",'wb')
-    for chunk in r.iter_content(100000):
-        webfile.write(chunk)
-    webfile.close
-    dom = BeautifulSoup(r.text)
-    return dom
-
 def dcc_move(s, handle, source, dest):
     # Syntax:	MOVE / <handle>
     # HTTP Method:	POST
@@ -626,26 +616,6 @@ def mkCol(s,parentColl, collName, collDesc):
     handle = r.headers['docushare-handle']
     return(handle)             
 
-def testGetProps():
-    # Login to DCC
-    s = login(cf.dcc_url + cf.dcc_login)
-    
-    handle = 'Document-2688'
-
-
-    print('\ngetProps prop_find replacement')
-    fd = getProps(s, handle, InfoSet = 'DocAll', WriteProp = True)
-    print_doc_info(fd)
-    
-    print('prop_find test')
-    dom = dom_prop_find(s, handle)
-    fd1 = read_dcc_doc_data(dom)
-    print_doc_info(fd1)
-    
-    print('FD compare', fd == fd1)
-    
-    
-
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
@@ -654,26 +624,3 @@ if __name__ == '__main__':
 #     testGetBasicInfo()
 #     testTraverse()
     testGetColl()
-
-
-
-# def prop_find_coll(s, target):
-#     if 'Collection' in target:
-#         url = cf.dcc_url + "/dsweb/PROPFIND/" + target
-#         headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "Depth":"0"}
-#         r = s.post(url,headers=headers)     # Gets all data
-#         return(r)
-#     else:
-#         sys.exit('Error: call to prop_find_collection without target collection')
-
-# def dom_prop_find_coll(s, target):
-#     r = prop_find_coll(s, target)
-#     # Need to add flag to turn on / off writing to file
-#     webfile = open(cf.dccfilepath + target+".html",'wb')
-#     for chunk in r.iter_content(100000):
-#         webfile.write(chunk)
-#     webfile.close
-#     dom = BeautifulSoup(r.text)
-#     return dom
-
-    
