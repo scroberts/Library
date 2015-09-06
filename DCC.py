@@ -602,14 +602,7 @@ def dcc_read_collection(s, coll_handle, **kwargs):
     dom = dom_prop_find(s, coll_handle, **kwargs)
 
     clist = read_coll_content(dom)
-    return(clist)
-    
-def dcc_get_coll_handles(s, c_handle, **kwargs):
-    clist = dcc_read_collection(s, c_handle, **kwargs)
-    h = []
-    for c in clist:
-        h.append(c['name'][1])
-    return h    
+    return(clist) 
         
 def check_docs_in_coll(s, dl, cl):
     for c in cl:
