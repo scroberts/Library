@@ -23,7 +23,30 @@ import tree
 # http://customer.docushare.xerox.com/s.nl/ctype.KB/it.I/id.24908/KB.195/.f
 # https://docushare.xerox.com/dsdn/dsweb/Get/Document-8931/DocuShare%20HTTP_XML%20Interface%20Protocol%20Specification.pdf
 
-
+def change_owner(s, dochandle, userhandle):
+    url = cf.dcc_url + "/dsweb/PROPPATCH/" + dochandle
+    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
+    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><entityowner><dsref handle="'''
+    xml += userhandle
+    xml += '''"/></entityowner></prop></set></propertyupdate>'''
+    print(xml)
+    r = s.post(url,data=xml,headers=headers)
+    print(r.text)
+    print(r.headers)
+    print("Owner Change Status Code:", r.status_code)
+    
+def download_file(s, handle, targetpath, filename):
+    # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
+    url = cf.dcc_url + "/dsweb/GET/" + handle
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+    r = s.post(url,headers=headers) 
+#     print(r.headers)
+    file = open(targetpath + filename,'wb')
+    for chunk in r.iter_content(100000):
+        file.write(chunk)
+    file.close
+    return(r) 
+    
 def login(url):
     # See if secrets file exists and if so use credentials from there
     try:
@@ -56,19 +79,22 @@ def login(url):
     # print('Cookies:\n', c)
     return s
     
-def change_owner(s, dochandle, userhandle):
-    url = cf.dcc_url + "/dsweb/PROPPATCH/" + dochandle
-    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
-    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><entityowner><dsref handle="'''
-    xml += userhandle
-    xml += '''"/></entityowner></prop></set></propertyupdate>'''
-    print(xml)
-    r = s.post(url,data=xml,headers=headers)
-    print(r.text)
-    print(r.headers)
-    print("Owner Change Status Code:", r.status_code)
-
-
+def mkCol(s,parentColl, collName, collDesc):
+    # Create a collection, return the handle
+    url = cf.dcc_url + "/dsweb/MKCOL/" + parentColl
+    
+    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
+     
+    xml1 = """<?xml version="1.0" ?><propertyupdate><set><prop><displayname><![CDATA["""
+    xml2 = """]]></displayname><description>"""
+    xml3 = """</description></prop></set></propertyupdate>"""
+    xml = xml1 + collName + xml2 + collDesc + xml3   
+    
+    r = s.post(url,data=xml,headers=headers)  # Gets limited data
+    
+    handle = r.headers['docushare-handle']
+    return(handle)  
+    
 def set_permissions(s,handle,fd):
     # fd follows the permissions dictionary format
     
@@ -102,18 +128,7 @@ def set_permissions(s,handle,fd):
 #     print(r.text)
 #     print(r.headers)
 
-    
-def get_file(s, handle, targetpath, filename):
-    # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
-    url = cf.dcc_url + "/dsweb/GET/" + handle
-    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    r = s.post(url,headers=headers) 
-#     print(r.headers)
-    file = open(targetpath + filename,'wb')
-    for chunk in r.iter_content(100000):
-        file.write(chunk)
-    file.close
-    return(r) 
+
     
 def writeProps(r, fname):
     webfile = open(cf.dccfilepath + fname +".html",'wb')
@@ -525,18 +540,7 @@ def read_coll_content(dom):
         fd['owner'] = [fd['owner-name'], fd['owner-username'], fd['owner-userid']]
         fd['summary'] = res.summary.text
         fd['modified'] = dom.getlastmodified.text
-        
-#         fd['parents'] = []
-#         for par in dom.find("parents").find_all("dsref"):
-#             fd['parents'].append([par['handle'],par.displayname.text])
-# 
-#         fd['parents'] = []
-#         try:
-#             for par in res.find_all("parents"):
-#                 fd['parents'].append([par.dsref['handle'],par.displayname.text])
-#         except:
-#             fd['parents'] = [fd['name'][1],'No Parent Exists']
-            
+                   
         clist.append(fd)
     return(clist)
 
@@ -561,21 +565,7 @@ def check_docs_in_coll(s, dl, cl):
             else:
                 print(d, ' found in ', c)
                 
-def mkCol(s,parentColl, collName, collDesc):
-    # Create a collection, return the handle
-    url = cf.dcc_url + "/dsweb/MKCOL/" + parentColl
-    
-    headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-     
-    xml1 = """<?xml version="1.0" ?><propertyupdate><set><prop><displayname><![CDATA["""
-    xml2 = """]]></displayname><description>"""
-    xml3 = """</description></prop></set></propertyupdate>"""
-    xml = xml1 + collName + xml2 + collDesc + xml3   
-    
-    r = s.post(url,data=xml,headers=headers)  # Gets limited data
-    
-    handle = r.headers['docushare-handle']
-    return(handle)             
+           
 
 
 if __name__ == '__main__':
