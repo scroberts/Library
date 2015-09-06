@@ -596,13 +596,6 @@ def file_read_collection(coll):
     dom = BeautifulSoup(fh)
     clist = read_coll_content(dom)
     return(clist)
-    
-def dcc_read_collection(s, coll_handle, **kwargs):
-    # Reads collection data from the DCC
-    dom = dom_prop_find(s, coll_handle, **kwargs)
-
-    clist = read_coll_content(dom)
-    return(clist) 
         
 def check_docs_in_coll(s, dl, cl):
     for c in cl:
