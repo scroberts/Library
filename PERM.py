@@ -85,8 +85,8 @@ def checkPerms(target, permissions):
         elif 'Collection' in doc:
             fd = DCC.prop_get(s, doc, InfoSet = 'CollData', WriteProp = True)
             fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
-            print("\n\n*** Collection Entry", fd['dccnum'], "***")
-            print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['dccnum'] + "/view")
+            print("\n\n*** Collection Entry", fd['handle'], "***")
+            print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['handle'] + "/view")
         else:
             checkFlag = False
             print("\nNot checking permissions on object that is not a Collection or Document):",doc) 

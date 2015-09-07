@@ -49,11 +49,12 @@ def change_owner(s, dochandle, userhandle):
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><entityowner><dsref handle="'''
     xml += userhandle
     xml += '''"/></entityowner></prop></set></propertyupdate>'''
-    print(xml)
+    if debug: print(xml)
     r = s.post(url,data=xml,headers=headers)
     if debug: print(r.text)
     if debug: print(r.headers)
     print("Owner Change Status Code:", r.status_code)
+    
     
 def check_docs_in_coll(s, dl, cl):
     for c in cl:
@@ -251,7 +252,7 @@ def prop_get(s, handle, **kwargs):
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
-                'CollData' : '<title/><summary/><entityowner/><getlastmodified/>',
+                'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
                 'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',
                 'Summary' : '<summary/>',
                 'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><acl/><getlastmodified/><summary/><parents/><versions/>',
@@ -318,16 +319,17 @@ def prop_scrape(dom, infSet, depth):
     return(fd) 
     
 def print_coll_children(fd):
-    print("Children...")
+    print("\nChildren...")
     for c in fd:
         print("  [",c[0],"], \"", c[1], "\"", sep = "")
 
 def print_coll_data(fd):
     # used for Depth = '0'
-    print("\n\n*** Collection Handle", fd['handle'], "***\n")
+    print("\n*** Collection Handle", fd['handle'], "***\n")
     print("Title: ", fd['title'])
     print("Summary: ", fd['summary'])
-    print("Modified Date: ", fd['modified'])
+    print("Keywords: ", fd['keywords'])
+    print("Modified Date: ", fd['date'])
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
       
 def print_coll_info(clist):
@@ -346,33 +348,33 @@ def print_coll_info(clist):
         idx += 1
        
 def print_coll_info_entry(indent,c):
-    print(" [", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
+    print("\n [", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
     print(indent,"Summary: ", c['summary'], sep = "")
-    print(indent,"Last Modified: ", c['modified'], sep = "")
+    print(indent,"Last Modified: ", c['date'], sep = "")
     print(indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
     
 def print_coll_parents(fd):   
-    print("Parents...")
+    print("\nParents...")
     for p in fd:
         print("  [",p[0],"], \"", p[1], "\"", sep = "")
 
 def print_doc_basic(fd):    
-    print("DCC Title: ", fd['title'])
+    print("\nDCC Title: ", fd['title'])
     print("TMT Document Number: ", fd['tmtnum'])
     print("DCC Document Handle/FileName: ", fd['handle'],", \"",fd['filename'],"\"",sep="")
-    print("DCC Date: ", fd['modified'])
+    print("DCC Date: ", fd['date'])
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
     print("Author: ", fd['author'], sep="")
     print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
     print("Size: ", fd['size'])
     
 def print_doc_all(fd):
-    print("\n\n*** Document Entry", fd['dccnum'], "***\n")
+    print("\n** Document Entry", fd['handle'], "***\n")
     print("TMT Document Number: ", fd['tmtnum'])
-    print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")
+    print("DCC Document Number/Name: ", fd['handle'],", \"",fd['title'],"\"",sep="")
     print("DCC Preferred Version: ", fd['prefver'])
     print("File Name: ", "\"",fd['filename'],"\"", sep = "")
-    print("Modified Date: ", fd['modified'])
+    print("Modified Date: ", fd['date'])
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
     print("Author: ", fd['author'], sep="")
     print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
@@ -384,10 +386,10 @@ def print_doc_all(fd):
     print("\nVersions...")
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
-    print("\n*** End Document Entry", fd['dccnum'], "***\n")
+    print("\n*** End Document Entry", fd['handle'], "***\n")
     
 def print_perm(permlist):
-    print("Permissions...")
+    print("\nPermissions...")
     for perm in sorted(permlist, key = lambda x: x["handle"]):
         print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
         if "Search" in perm.keys():
@@ -401,7 +403,7 @@ def print_perm(permlist):
         print(", \"",perm['name'],"\"",sep="")
 
 def print_ver(fd):
-    print("\n\n*** Version Entry", fd['dccver'], "***\n")
+    print("\n*** Version Entry", fd['dccver'], "***\n")
     print("Version: ", fd['dccver'])
     print("Version Number: ",fd['dccvernum'])
     print("Version Comment: ", fd['vercomment'])
@@ -424,7 +426,7 @@ def read_coll_cont(dom):
         fd['owner-userid'] = dom.entityowner.dsref['handle']
         fd['owner'] = [fd['owner-name'], fd['owner-username'], fd['owner-userid']]
         fd['summary'] = res.summary.text
-        fd['modified'] = dom.getlastmodified.text
+        fd['date'] = dom.getlastmodified.text
                    
         clist.append(fd)
     return(clist)
@@ -432,11 +434,10 @@ def read_coll_cont(dom):
 def read_coll_data(dom):
     # Applies to collection data for Depth = '0'
     fd = {}
-    fd['title'] = dom.title.text
-    fd['dccnum'] = get_handle(dom.response.href.text)
     fd['handle'] = get_handle(dom.response.href.text)
+    fd['title'] = dom.title.text
     fd['summary'] = dom.summary.text
-    fd['modified'] = dom.getlastmodified.text
+    fd['keywords'] = dom.keywords.text
     fd['date'] = dom.getlastmodified.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
@@ -446,13 +447,10 @@ def read_coll_data(dom):
 def read_doc_basic_data(dom):
     fd = {}
     fd['title'] = dom.displayname.text
-    fd['dccname'] = dom.displayname.text
-    fd['dccnum'] = get_handle(dom.handle.dsref['handle'])
+    fd['handle'] = get_handle(dom.handle.dsref['handle'])
     fd['tmtnum'] = dom.summary.text
     fd['filename'] = dom.document.text
-    fd['handle'] = get_handle(dom.dsref['handle'])
     fd['date'] = dom.getlastmodified.text
-    fd['modified'] = dom.getlastmodified.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
     fd['owner-userid'] = dom.entityowner.dsref['handle']
@@ -464,12 +462,11 @@ def read_doc_basic_data(dom):
 def read_doc_data(dom):
     # fill in file data dictionary
     fd = {}
-    fd['dccnum'] = get_handle(dom.acl['handle'])
-    fd['prefver'] = dom.preferred_version.dsref['handle']
+    fd['title'] = dom.displayname.text
+    fd['handle'] = get_handle(dom.acl['handle'])
     fd['tmtnum'] = dom.summary.text
-    fd['dccname'] = dom.displayname.text
+    fd['prefver'] = dom.preferred_version.dsref['handle']
     fd['filename'] = dom.webdav_title.text
-    fd['modified'] = dom.getlastmodified.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
     fd['owner-userid'] = dom.entityowner.dsref['handle']
@@ -556,6 +553,40 @@ def set_permissions(s,handle,fd):
     print("Permission Change Status Code:", r.status_code)
 
 
+def test_change_owner():
+    # Login to DCC
+    s = login(CF.dcc_url + CF.dcc_login)
+    collhandle = 'Collection-10892'
+    dochandle = 'Document-27819'
+    curr_owner = 'User-50'
+    new_owner = 'User-1083'
+    
+    print('\n*** Currently ****')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData')
+    print_coll_data(fd)
+    
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic')
+    print_doc_basic(fd)
+   
+    print('\n*** Change Owner ****') 
+    change_owner(s, collhandle, new_owner)
+    
+    fd = prop_get(s, collhandle, InfoSet = 'CollData')
+    print_coll_data(fd)
+
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic')
+    print_doc_basic(fd)
+    
+    print('\n*** Change Back ****') 
+
+    change_owner(s, collhandle, curr_owner)
+    
+    fd = prop_get(s, collhandle, InfoSet = 'CollData')
+    print_coll_data(fd)
+    
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic')
+    print_doc_basic(fd)
+
 def test_version():
     # Login to DCC
     s = login(CF.dcc_url + CF.dcc_login)
@@ -621,6 +652,7 @@ def test_props():
 if __name__ == '__main__':
     print("Running module test code for",__file__)
 #     test_props()
-    test_version()
+#     test_version()
+    test_change_owner()
 
 

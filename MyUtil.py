@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 # external modules
+import re
 
 # my modules
+
+def strip_xml(mystring):
+    return(re.sub('<[^>]*>', '', mystring))
 
 def get_yn(question):
     ans = ''
@@ -34,8 +38,13 @@ def test_mod():
     outlist = mod_dict_in_list(mylist, 'name', 'scott', 'flag', False)
     print(outlist)
     
+def test_strip():
+    mystring = '<p>Desc of test collection.</p><p>&nbsp;</p>'
+    print(strip_xml(mystring))
     
+
 if __name__ == '__main__':
     print("Running module test code for",__file__)
     test_mod()
+    test_strip()
                 

@@ -53,7 +53,7 @@ def check_cache_fd_json(s, handle, infoSet, fname, path = CF.dccfilepath):
         if infoSet in ['Children', 'CollCont', 'DocDate', 'Parents', 'Perms']:
             return([False, []])
         
-    if 'NoDateCheck' in cacheMode:
+    if 'NoDateCheck' in cacheMode or 'All' in cacheMode:
         dccDate = "Sat, 01 Jan 2000 00:00:00 GMT"
     else:
         fd = DCC.prop_get(s, handle, InfoSet = 'DocDate')

@@ -176,15 +176,15 @@ def gen_ss_cid(s, dl):
             # Now read preferred version
             prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
             # Subject Document
-            ssrow.append(doc['dccnum'])
-            ssrow.append(doc['dccname'])
+            ssrow.append(doc['handle'])
+            ssrow.append(doc['title'])
             ssrow.append(doc['tmtnum'])
             ssrow.append(doc['owner-username'])  
             # Evaluation of current reference
             ssrow.append('Doc Ref')             
             # Current reference
-            ssrow.append(doc['dccnum'])
-            ssrow.append(doc['dccname'])
+            ssrow.append(doc['handle'])
+            ssrow.append(doc['title'])
             ssrow.append(doc['owner-username'])   
             ssrow.append(doc['date'])
             # Suggested reference
@@ -194,7 +194,7 @@ def gen_ss_cid(s, dl):
             ssrow.append(prefver['date'])            
             DCC.print_doc_all(doc)
             DCC.print_ver(prefver)
-            print(doc['dccnum'], doc['dccname'], doc['tmtnum'], doc['owner-username'])
+            print(doc['handle'], doc['title'], doc['tmtnum'], doc['owner-username'])
             print("Doc Ref")
             print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])
         elif 'Version-' in d:
@@ -202,15 +202,15 @@ def gen_ss_cid(s, dl):
             ver = DCC.prop_get(s,d,InfoSet = 'VerAll', WriteProp = True)
             doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocAll', WriteProp = True)
             # Subject Document
-            ssrow.append(doc['dccnum'])
-            ssrow.append(doc['dccname'])
+            ssrow.append(doc['handle'])
+            ssrow.append(doc['title'])
             ssrow.append(doc['tmtnum'])
             ssrow.append(doc['owner-username'])  
             # find info on the preferred version
             prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
             # Evaluation of current reference          
             print("CID references Version")
-            print(doc['dccnum'], doc['dccname'], doc['tmtnum'])
+            print(doc['handle'], doc['title'], doc['tmtnum'])
             print("Referenced Version")
             print(ver['dccver'], ver['vercomment'], ver['owner-username'], ver['date'])
             if prefver['dccver'] == ver['dccver']:
