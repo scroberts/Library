@@ -10,8 +10,8 @@ from openpyxl.styles.colors import BLUE
 
 # my modules
 import DCC
-import get_url_word
-import config as cf
+import GetUrlWord
+import Config as CF
 import myutil
 
 # Set Excel Styles
@@ -80,7 +80,7 @@ def cid_report(ss, ss_name):
         # Column 1: DCC Document Handle
         ws.cell(row = ssrow, column = col).value = doc[0]
         ws.cell(row = ssrow, column = col).font = font_url_style
-        ws.cell(row = ssrow, column = col).hyperlink = cf.dcc_url + cf.dcc_prop + doc[0]
+        ws.cell(row = ssrow, column = col).hyperlink = CF.dcc_url + CF.dcc_prop + doc[0]
         ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
         col += 1
         # Column 2: DCC Document Title
@@ -102,7 +102,7 @@ def cid_report(ss, ss_name):
         # Column 6: Current CID Reference Handle
         ws.cell(row = ssrow, column = col).value = doc[5]
         ws.cell(row = ssrow, column = col).font = font_url_style
-        ws.cell(row = ssrow, column = col).hyperlink = cf.dcc_url + cf.dcc_prop + doc[5]
+        ws.cell(row = ssrow, column = col).hyperlink = CF.dcc_url + CF.dcc_prop + doc[5]
         ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
         col += 1
         # Column 7: Current CID Reference Comment
@@ -121,7 +121,7 @@ def cid_report(ss, ss_name):
         # Column 10: Suggested CID Reference Handle
         ws.cell(row = ssrow, column = col).value = doc[9]
         ws.cell(row = ssrow, column = col).font = font_url_style
-        ws.cell(row = ssrow, column = col).hyperlink = cf.dcc_url + cf.dcc_prop + doc[9]
+        ws.cell(row = ssrow, column = col).hyperlink = CF.dcc_url + CF.dcc_prop + doc[9]
         ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
         col += 1
         # Column 11: Suggested CID Reference Comment
@@ -285,10 +285,10 @@ def make_handle_lists(json_ssdata, docfname, verfname):
     
 def make_cid(dirpath, CID_coll, htmlfile, outroot):
     # Get list of DCC documents from a Word file saved as html
-    get_url_word.get_url_word(dirpath + outroot, dirpath + htmlfile)  
+    GetUrlWord.get_url_word(dirpath + outroot, dirpath + htmlfile)  
 
     # Login to DCC
-    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
 
     json_handlelist = dirpath + outroot + 'bothlist.txt'
     json_ssdata = dirpath + outroot + 'CID.txt'

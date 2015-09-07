@@ -9,8 +9,8 @@ import json
 
 # my modules
 import DCC
-import config as cf
-import tree
+import Config as CF
+import Tree
 
 debug = False
 
@@ -34,7 +34,7 @@ def check_date_okay(dccDate, osSecs):
     if debug: print('Cache out of date')
     return(False)
     
-def check_cache_okay(s, handle, dccDate, fname, path = cf.dccfilepath):
+def check_cache_okay(s, handle, dccDate, fname, path = CF.dccfilepath):
     if not '.json' in fname:
         fname = fname + '.json' 
     if not os.path.isfile(path+fname):
@@ -44,7 +44,7 @@ def check_cache_okay(s, handle, dccDate, fname, path = cf.dccfilepath):
         return(False)
     return(True)
 
-def check_cache_fd_json(s, handle, infoSet, fname, path = cf.dccfilepath):
+def check_cache_fd_json(s, handle, infoSet, fname, path = CF.dccfilepath):
     if 'NoCache' in cacheMode:
         return([False], [])
         
@@ -70,22 +70,22 @@ def check_cache_fd_json(s, handle, infoSet, fname, path = cf.dccfilepath):
     
 def test_cache():
     # Login to DCC
-    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
     handle = 'Collection-286' 
     fname = 'Collection-286_CollData'
     
     [flag, fd] = check_cache_fd_json(s, handle, 'CollData', fname)
     print(flag, fd)
 
-def file_write_props(r, fname, path = cf.dccfilepath):
+def file_write_props(r, fname, path = CF.dccfilepath):
     if not '.html' in fname:
         fname = fname + '.html'
-    webfile = open(cf.dccfilepath + fname,'wb')
+    webfile = open(CF.dccfilepath + fname,'wb')
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
 
-def file_write_json(obj, fname, path = cf.dccfilepath):
+def file_write_json(obj, fname, path = CF.dccfilepath):
     if not '.json' in fname:
         fname = fname + '.json'
     if debug: print('writing', path+fname)
@@ -93,7 +93,7 @@ def file_write_json(obj, fname, path = cf.dccfilepath):
     json.dump(obj, fh)
     fh.close()
     
-def file_read_json(fname, path = cf.dccfilepath):
+def file_read_json(fname, path = CF.dccfilepath):
     if not '.json' in fname:
         fname = fname + '.json'
     if debug: print('reading', path+fname)
@@ -165,15 +165,15 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
             traverse(s, tr, c, dirpath, indent + '\t', **kwargs)
 
 def create_DCC_mirror(s, dcc_handle, dirpath, **kwargs):
-    tr = tree.get_tree(s,dcc_handle)
-    tree.print_tree(tr)
-    docList = tree.get_flat_tree(tr)
+    tr = Tree.get_tree(s,dcc_handle)
+    Tree.print_tree(tr)
+    docList = Tree.get_flat_tree(tr)
     traverse(s, tr, tr['root']['collections'][0], dirpath, **kwargs)
     
             
 def testTraverse():        
     # Login to DCC
-    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
 
     coll = 'Collection-286'    
     create_DCC_mirror(s, coll, '/Users/sroberts/Box Sync/TMT DCC Files/Test/', SaveFiles = True, MaxFileSize = 2000000)

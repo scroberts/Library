@@ -13,8 +13,8 @@ from datetime import datetime
 import time
 
 # my modules
-import config as cf
-import tree
+import Config as CF
+import Tree
 import FileSys
 
 debug = False
@@ -38,13 +38,13 @@ def add_docs_2_collections(s, docs, colls):
     for c in colls:
         for d in docs:
             print('Adding ', d, ' to ', c)
-            url = cf.dcc_url + "/dsweb/COPY/" + d
+            url = CF.dcc_url + "/dsweb/COPY/" + d
             headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "DESTINATION": c}
             r = s.post(url, headers=headers)
             if debug: print(r.text)
             
 def change_owner(s, dochandle, userhandle):
-    url = cf.dcc_url + "/dsweb/PROPPATCH/" + dochandle
+    url = CF.dcc_url + "/dsweb/PROPPATCH/" + dochandle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><entityowner><dsref handle="'''
     xml += userhandle
@@ -79,7 +79,7 @@ def dcc_move(s, handle, source, dest):
     # disambiguate the MOVE request. Its value must be the handle of one of
     # the existing parents for <handle>.
     print('Moving ',handle,' from ', source,' to ', dest)
-    url = cf.dcc_url + "/dsweb/MOVE/" + handle
+    url = CF.dcc_url + "/dsweb/MOVE/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "SOURCE": source, "DESTINATION": dest}
     r = s.post(url, headers=headers) 
     print(r.text)
@@ -107,7 +107,7 @@ def dcc_remove_doc_from_coll(s, handle, coll):
     
 def file_download(s, handle, targetpath, filename):
     # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
-    url = cf.dcc_url + "/dsweb/GET/" + handle
+    url = CF.dcc_url + "/dsweb/GET/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     r = s.post(url,headers=headers) 
     file = open(targetpath + filename,'wb')
@@ -119,7 +119,7 @@ def file_download(s, handle, targetpath, filename):
 def file_download_html(url, cookies, outfile):
     # Writes html from url to outfile
     r = requests.get(url, cookies = cookies)
-    webfile = open(cf.dccfilepath + outfile,'wb')
+    webfile = open(CF.dccfilepath + outfile,'wb')
     for chunk in r.iter_content(100000):
         webfile.write(chunk)
     webfile.close
@@ -127,7 +127,7 @@ def file_download_html(url, cookies, outfile):
 def file_read_collection(coll):
     # Reads collection data from a .html file on disk
     htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
-    fh=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
+    fh=open(CF.dccfilepath + htmlfile,'r',encoding='utf-8').read()
     dom = BeautifulSoup(fh)
     clist = read_coll_cont(dom)
     return(clist)
@@ -176,7 +176,7 @@ def list_obj_in_coll(s, collhandle, **kwargs):
             if pflag:
                 print('Other: ',f['handle'])
     if jflag:
-        fh = open(cf.dccfilepath + collhandle + file_ext,'w')
+        fh = open(CF.dccfilepath + collhandle + file_ext,'w')
         json.dump(objlist, fh)
         fh.close()
     return(objlist)
@@ -213,7 +213,7 @@ def login(url):
     
 def mkCol(s,parentColl, collName, collDesc):
     # Create a collection, return the handle
-    url = cf.dcc_url + "/dsweb/MKCOL/" + parentColl
+    url = CF.dcc_url + "/dsweb/MKCOL/" + parentColl
     
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
      
@@ -244,7 +244,7 @@ def prop_get(s, handle, **kwargs):
     #  RetDom - Return BeautifulSoup object rather than file data structure
     #  WriteProp = (True|False)
     
-    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
+    url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
@@ -528,7 +528,7 @@ def read_ver_data(dom):
 def set_permissions(s,handle,fd):
     # fd follows the permissions dictionary format
     
-    url = cf.dcc_url + "/dsweb/PROPPATCH/" + handle
+    url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><acl handle="''' 
     xml += handle
@@ -558,7 +558,7 @@ def set_permissions(s,handle,fd):
 
 def test_version():
     # Login to DCC
-    s = login(cf.dcc_url + cf.dcc_login)
+    s = login(CF.dcc_url + CF.dcc_login)
 
     handle = 'Version-32465'
     fd = prop_get(s, handle, InfoSet = 'VerAll', WriteProp = True)
@@ -567,7 +567,7 @@ def test_version():
 
 def test_props():
     # Login to DCC
-    s = login(cf.dcc_url + cf.dcc_login)
+    s = login(CF.dcc_url + CF.dcc_login)
 
     collhandle = 'Collection-7337'
     # collhandle = 'Collection-10259'

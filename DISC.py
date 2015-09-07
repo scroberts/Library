@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 from datetime import datetime
 
 # My modules
-import config as cf
+import Config as CF
 import DCC
 
 # Set Excel Styles
@@ -32,7 +32,7 @@ def get_bb_prop(s, handle):
 #     list containing title, description and keywords strings
 
 
-    url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
+    url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml","Depth":"0"}
     xml = """<?xml version="1.0" ?>
         <propfind>
@@ -62,7 +62,7 @@ def get_bb_prop(s, handle):
     return([title, description, keywords])
 
 def set_bb_prop(s, title, description, keywords, handle):
-    url = cf.dcc_url + "/dsweb/PROPPATCH/" + handle
+    url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     xml = """<?xml version="1.0" ?>
         <propertyupdate>
@@ -77,7 +77,7 @@ def set_bb_prop(s, title, description, keywords, handle):
 #     print('Status code:', r.status_code)
     
 def create_bb_post(s, title, description, keywords, handle):
-    url = cf.dcc_url + "/dsweb/MKRES/" + handle + "/Bulletin"
+    url = CF.dcc_url + "/dsweb/MKRES/" + handle + "/Bulletin"
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     xml = """<?xml version="1.0" ?>
         <propertyupdate>
@@ -187,17 +187,17 @@ def set_ss_headings(ws, rownum, col):
         
 def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
     # Login to DCC and save the discussion as an html file
-    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
     res = s.get(url)
     res.raise_for_status()
 
-    webfile = open(cf.dccfilepath + htmlfile,'wb')
+    webfile = open(CF.dccfilepath + htmlfile,'wb')
     for chunk in res.iter_content(100000):
         webfile.write(chunk)
     webfile.close
 
     # Get the HTML into the Beautiful Soup object
-    dcc=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
+    dcc=open(CF.dccfilepath + htmlfile,'r',encoding='utf-8').read()
     dom = BeautifulSoup(dcc, "html.parser")
 
     # Open the spreadsheet

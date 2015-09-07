@@ -16,7 +16,7 @@ from requests.auth import HTTPBasicAuth
 
 # My modules
 import DCC
-import config as cf
+import Config as CF
 
 
 def tracetree_login():
@@ -40,13 +40,13 @@ def tracetree_login():
 
 def get_docmod_html_files(s):
     try:
-        res = s.get(cf.docs_url_main)
+        res = s.get(CF.docs_url_main)
         res.raise_for_status()
     except:
         print('Unable to get from TraceTree, check login credentials')
         print('Status code:', res.status_code)
 
-    webfile = open(cf.tracetreefilepath + 'document_module_main.html','wb')
+    webfile = open(CF.tracetreefilepath + 'document_module_main.html','wb')
     for chunk in res.iter_content(100000):
         webfile.write(chunk)
     webfile.close
@@ -69,20 +69,20 @@ def get_docmod_html_files(s):
     for url in urls:
         if goodurl.search(url):
             newurllist.append(url)
-            if os.path.isfile(cf.tracetreefilepath + url):
+            if os.path.isfile(CF.tracetreefilepath + url):
                 print('Found existing file: ', url)
             else:
                 print('Reading and saving: ', url)
-                res = s.get(cf.docs_url_base + url)
+                res = s.get(CF.docs_url_base + url)
                 res.raise_for_status()
-                webfile = open(cf.tracetreefilepath + url,'wb')
+                webfile = open(CF.tracetreefilepath + url,'wb')
                 for chunk in res.iter_content(100000):
                     webfile.write(chunk)
                 webfile.close
     return(newurllist)
             
 def get_tracetree_docmod_dict(url):
-    file = open(cf.tracetreefilepath + url,'r',encoding='latin-1').read()
+    file = open(CF.tracetreefilepath + url,'r',encoding='latin-1').read()
     dom = BeautifulSoup(file)
     dict = {}
     for child in dom.table.children:  
@@ -109,13 +109,13 @@ def create_docmod_file(filename):
     s = tracetree_login()
     urls = get_docmod_html_files(s)
 
-    fh = open(cf.tracetreefilepath + cf.docmod_url_list_file,'w')
+    fh = open(CF.tracetreefilepath + CF.docmod_url_list_file,'w')
     json.dump(urls, fh)
     fh.close()
 
     docmod = build_docmod_dict(urls)
     
-    fh = open(cf.tracetreefilepath + cf.docmod_dict_file,'w')
+    fh = open(CF.tracetreefilepath + CF.docmod_dict_file,'w')
     json.dump(docmod, fh)
     fh.close()
 
@@ -146,7 +146,7 @@ def test_is_in_dict():
     test['last'] = 'Roberts'
     test['country'] = 'Canada'
 
-    match = docmod.is_in_dict(test,scott)
+    match = is_in_dict(test,scott)
     print('match = ', match)
     
 def print_report(docmodreport, doc):

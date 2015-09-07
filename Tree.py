@@ -4,7 +4,7 @@
 
 # my modules
 import DCC
-import config as cf
+import Config as CF
 
 def flat_tree(tree, key, list):
     branch = tree[key]
@@ -78,7 +78,7 @@ def test_tree():
     collhandle = 'Collection-10259'
 
     # Login to DCC
-    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
 
     
     tree = get_tree(s, collhandle)

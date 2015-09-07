@@ -4,8 +4,8 @@
 
 # my modules
 import DCC
-import config as cf
-import tree
+import Config as CF
+import Tree
 import sys
 
 def printCheckCriteria(target, permissions):
@@ -58,12 +58,12 @@ def printCheckPerms(perm,plist):
 
 def checkPerms(target, permissions):
     # Login to DCC
-    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
 
     if 'Collection' in target:
-        tr = tree.get_tree(s,target)
-        tree.print_tree(tr)
-        docList = tree.get_flat_tree(tr)
+        tr = Tree.get_tree(s,target)
+        Tree.print_tree(tr)
+        docList = Tree.get_flat_tree(tr)
         
     else:
         docList = [target]
