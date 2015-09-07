@@ -56,6 +56,19 @@ def printCheckPerms(perm,plist):
     
     return perms_okay
 
+def fixPerm(s,handle):
+    if 'Document-' in handle:
+        fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic', Print = True)
+        fd['permissions'] = DCC.prop_get(s, handle, InfoSet = 'Perms', Depth = '0', Print = True)
+  
+    elif 'Collection-' in handle:
+        fd = DCC.prop_get(s, handle, InfoSet = 'CollData', Print = True)
+        fd['permissions'] = DCC.prop_get(s, handle, InfoSet = 'Perms', Depth = '0', Print = True)
+
+    else:
+        print('Not Document or Collection, not touching')
+
+
 def checkPerms(target, permissions):
     # Login to DCC
     s = DCC.login(CF.dcc_url + CF.dcc_login)
@@ -75,16 +88,16 @@ def checkPerms(target, permissions):
     for doc in docList:
         checkFlag = True
         if 'Document' in doc:
-            fd = DCC.prop_get(s, doc, InfoSet = 'DocBasic', WriteProp = True)
-            fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
+            fd = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
+            fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0')
     
             print("\n\n*** Document Entry", fd['handle'], "***")
             print("DCC Name: \"",fd['title'],"\"",sep="")
             print("TMT Document Number: ", fd['tmtnum'])
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['handle'] + "/view")
         elif 'Collection' in doc:
-            fd = DCC.prop_get(s, doc, InfoSet = 'CollData', WriteProp = True)
-            fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0', WriteProp = True)
+            fd = DCC.prop_get(s, doc, InfoSet = 'CollData')
+            fd['permissions'] = DCC.prop_get(s, doc, InfoSet = 'Perms', Depth = '0')
             print("\n\n*** Collection Entry", fd['handle'], "***")
             print("https://docushare.tmt.org/docushare/dsweb/ServicesLib/" + fd['handle'] + "/view")
         else:
@@ -153,9 +166,18 @@ def testPerm():
     print('List of docs that pass:', passList)
     print('List of docs that fail:', failList)
             
+def testFixPerm():
+    # Login to DCC
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
+    collhandle = 'Collection-10071'
+    dochandle = 'Document-21380'
+    fixPerm(s,collhandle)
+    fixPerm(s,dochandle)
+
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    testPerm()
+#     testPerm()
+    testFixPerm()
 
     
     

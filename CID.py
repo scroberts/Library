@@ -172,9 +172,9 @@ def gen_ss_cid(s, dl):
         print("trying", d)
         if 'Document-' in d:
             # CID link is to a document Handle
-            doc = DCC.prop_get(s,d,InfoSet = 'DocAll', WriteProp = True)
+            doc = DCC.prop_get(s,d,InfoSet = 'DocAll')
             # Now read preferred version
-            prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
+            prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll')
             # Subject Document
             ssrow.append(doc['handle'])
             ssrow.append(doc['title'])
@@ -199,15 +199,15 @@ def gen_ss_cid(s, dl):
             print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])
         elif 'Version-' in d:
             # CID link is to a version handle
-            ver = DCC.prop_get(s,d,InfoSet = 'VerAll', WriteProp = True)
-            doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocAll', WriteProp = True)
+            ver = DCC.prop_get(s,d,InfoSet = 'VerAll')
+            doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocAll')
             # Subject Document
             ssrow.append(doc['handle'])
             ssrow.append(doc['title'])
             ssrow.append(doc['tmtnum'])
             ssrow.append(doc['owner-username'])  
             # find info on the preferred version
-            prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
+            prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll')
             # Evaluation of current reference          
             print("CID references Version")
             print(doc['handle'], doc['title'], doc['tmtnum'])
@@ -304,7 +304,7 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
     ## Remove the files that are currently located in the collection for the CID
 
     if MyUtil.get_yn('Remove location (not delete) of files from ' + CID_coll[0] +'(Y/N)?: '):
-        doclist = DCC.list_obj_in_coll(s, CID_coll[0],Print=True,Jwrite=False,Depth='infinity',Type='Doc',WriteProp=False)
+        doclist = DCC.list_obj_in_coll(s, CID_coll[0],Print=True,Jwrite=False,Depth='infinity',Type='Doc')
         for doc in doclist:
             DCC.dcc_remove_doc_from_coll(s, doc, CID_coll[0])
 

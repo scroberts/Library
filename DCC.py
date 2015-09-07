@@ -60,7 +60,7 @@ def check_docs_in_coll(s, dl, cl):
     for c in cl:
         # get the list of documents in the collection
         
-        cdl = list_obj_in_coll(s,c,Print=True,Jwrite=False,Depth='infinity',Type='Doc',WriteProp=False)
+        cdl = list_obj_in_coll(s,c,Print=True,Jwrite=False,Depth='infinity',Type='Doc')
 
         for d in dl:
             #  print('testing ', d, ' in ', cdl)
@@ -91,7 +91,7 @@ def dcc_remove_doc_from_coll(s, handle, coll):
         coll - the parent collection
     """
     # First find other collections where the document exists
-    loc = prop_get(s, handle, InfoSet = 'Parents', WriteProp = True)
+    loc = prop_get(s, handle, InfoSet = 'Parents')
     incoll = False  # Flag to check that the document exists in the collection
     target = None # target should contain a valid target collection
     for l in loc:
@@ -212,7 +212,7 @@ def login(url):
     if debug: print('Cookies:\n', c)
     return s
     
-def mkCol(s,parentColl, collName, collDesc):
+def make_collection(s,parentColl, collName, collDesc):
     # Create a collection, return the handle
     url = CF.dcc_url + "/dsweb/MKCOL/" + parentColl
     
@@ -243,7 +243,8 @@ def prop_get(s, handle, **kwargs):
     #  InfoSet = Perms - Document Permissions
     #  InfoSet = VerAll - All Version information
     #  RetDom - Return BeautifulSoup object rather than file data structure
-    #  WriteProp = (True|False)
+    #  WriteProp = (True|False) - Write .html to disk?
+    #  Print = (True|False) - Call print function on InfoSet?
     
     url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
@@ -259,10 +260,11 @@ def prop_get(s, handle, **kwargs):
                 'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
-    writeRes = kwargs.get('WriteProp', True)
+    writeRes = kwargs.get('WriteProp', False)
     retDom = kwargs.get('RetDom',False)
     depth = kwargs.get('Depth','0') 
     headers['Depth'] = depth
+    printFlag = kwargs.get('Print', False)
     
     if infoSet == 'CollCont':
         fRoot = handle + '_' + infoSet + depth
@@ -290,9 +292,34 @@ def prop_get(s, handle, **kwargs):
         fd = prop_scrape(dom, infoSet, depth)
         FileSys.file_write_json(fd, fRoot)
 
+    if printFlag: 
+        prop_print(infoSet,fd)
     return(fd)
     
-def prop_scrape(dom, infSet, depth):
+def prop_print(infoSet, fd):
+    if infoSet == 'DocBasic':
+        print_doc_basic(fd)
+    elif infoSet == 'DocDate':
+        date = dom.getlastmodified.text
+        print('Date: ', fd['date'])
+    elif infoSet == 'Parents':
+        print_parents(fd)
+    elif infoSet == 'Children':
+        print(fd)
+        print_children(fd)
+    elif infoSet == 'DocAll':
+        print_doc_all(fd)
+    elif infoSet == 'VerAll':
+        print_ver(fd)
+    elif infoSet == 'CollData':
+        print(fd)
+        print_coll_data(fd)
+    elif infoSet == 'CollCont':     
+        print_coll_cont(fd)
+    elif infoSet == 'Perms':
+        print_perms(fd)
+
+def prop_scrape(dom, infSet, printFlag):
     if infSet == 'DocBasic':
         fd = read_doc_basic_data(dom)
     elif infSet == 'DocDate':
@@ -310,6 +337,7 @@ def prop_scrape(dom, infSet, depth):
         fd = read_doc_data(dom)
     elif infSet == 'VerAll':
         fd = read_ver_data(dom)   
+        if printFlag: print_ver(fd)
     elif infSet == 'CollData':
         fd = read_coll_data(dom)
     elif infSet == 'CollCont':     
@@ -318,7 +346,7 @@ def prop_scrape(dom, infSet, depth):
         fd = read_doc_perms(dom)
     return(fd) 
     
-def print_coll_children(fd):
+def print_children(fd):
     print("\nChildren...")
     for c in fd:
         print("  [",c[0],"], \"", c[1], "\"", sep = "")
@@ -332,28 +360,28 @@ def print_coll_data(fd):
     print("Modified Date: ", fd['date'])
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
       
-def print_coll_info(clist):
+def print_coll_cont(clist):
 # Used for depth of '1' or 'infinity'
     # pprint.pprint(clist)
     idx = 0
     for c in clist:
         if idx == 0:
             print("\nListing of: ",sep = "",end="")
-            print_coll_info_entry('',c)
+            print_coll_cont_entry('',c)
             print("\nContents:")
         else: 
             print("  ",'%2d' % idx, ": ", sep="", end="")
-            print_coll_info_entry('    ',c)
+            print_coll_cont_entry('    ',c)
             print("")
         idx += 1
        
-def print_coll_info_entry(indent,c):
+def print_coll_cont_entry(indent,c):
     print("\n [", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
     print(indent,"Summary: ", c['summary'], sep = "")
     print(indent,"Last Modified: ", c['date'], sep = "")
     print(indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
     
-def print_coll_parents(fd):   
+def print_parents(fd):   
     print("\nParents...")
     for p in fd:
         print("  [",p[0],"], \"", p[1], "\"", sep = "")
@@ -379,7 +407,7 @@ def print_doc_all(fd):
     print("Author: ", fd['author'], sep="")
     print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
     print("Last Modified: ", fd['date'])
-    print_perm(fd['permissions'])
+    print_perms(fd['permissions'])
     print("\nLocations...")
     for loc in sorted(fd['locations'], key = lambda x: x[0]):
         print(loc[0],", \"",loc[1],"\"", sep="")
@@ -388,7 +416,7 @@ def print_doc_all(fd):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
     
-def print_perm(permlist):
+def print_perms(permlist):
     print("\nPermissions...")
     for perm in sorted(permlist, key = lambda x: x["handle"]):
         print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
@@ -610,40 +638,31 @@ def test_props():
     start = time.time()
 
     print('Call 1')
-    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True)
-    print_doc_all(fd)
+    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
 
     print('Call 2')
-    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True)
-    print_doc_basic(fd)
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
 
     print('Call 3')
-    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True)
-    print_coll_data(fd)
-
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+ 
     print('Call 4')
-    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True)
-    print_coll_info(fd)
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
 
     print('Call 5')
-    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True)
-    print_coll_info(fd)
-
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
+ 
     print('Call 6')
-    fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True)
-    print_coll_parents(fd)
+    fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
 
     print('Call 7')
-    fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True)
-    print_coll_children(fd)
+    fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
     
     print('Call 8')
-    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True)
-    fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True)
-    fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True)
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+    fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
+    fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
     
-    print(fd)
-
     end = time.time()
 
     print('Execution time in seconds:', end - start)
@@ -651,8 +670,8 @@ def test_props():
            
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-#     test_props()
-#     test_version()
+    test_props()
+    test_version()
     test_change_owner()
 
 
