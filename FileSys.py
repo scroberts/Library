@@ -13,7 +13,18 @@ import config as cf
 import tree
 
 debug = False
-cacheMode = 'NoDateCheck'
+
+# cacheMode Options
+# NoDateCheck - if file exists it will be used
+# NoCache - Cached files will be ignored
+# Normal - Cached files will be used if determined valid
+# All - All Cached Files will be used, even if validity cannot be determined (offline mode)
+
+# cacheMode = ['NoDateCheck']
+cacheMode = ['Normal']
+# cacheMode = ['NoDateCheck', 'Normal']
+# cacheMode = ['All']
+# cacheMode = ['NoCache']
 
 def check_date_okay(dccDate, osSecs):
     dccSecs = (datetime.strptime(dccDate,'%a, %d %b %Y %H:%M:%S %Z') - datetime(1970,1,1)).total_seconds()
@@ -24,6 +35,8 @@ def check_date_okay(dccDate, osSecs):
     return(False)
     
 def check_cache_okay(s, handle, dccDate, fname, path = cf.dccfilepath):
+    if not '.json' in fname:
+        fname = fname + '.json' 
     if not os.path.isfile(path+fname):
         return(False)
     if debug: print('File Exists')
@@ -32,17 +45,25 @@ def check_cache_okay(s, handle, dccDate, fname, path = cf.dccfilepath):
     return(True)
 
 def check_cache_fd_json(s, handle, infoSet, fname, path = cf.dccfilepath):
-    if not '.json' in fname:
-        fname = fname + '.json'
-    if cacheMode == 'NoDateCheck':
+    if 'NoCache' in cacheMode:
+        return([False], [])
+        
+    # Check if validity can be determined
+    if 'Normal' in cacheMode:
+        if infoSet in ['Children', 'CollCont', 'DocDate', 'Parents', 'Perms']:
+            return([False, []])
+        
+    if 'NoDateCheck' in cacheMode:
         dccDate = "Sat, 01 Jan 2000 00:00:00 GMT"
     else:
         fd = DCC.prop_get(s, handle, InfoSet = 'DocDate')
         dccDate = fd['date']
+                
     if not check_cache_okay(s, handle, dccDate, fname):
         if debug: print('check_cache_fd_json - NOT okay in cache')
         return([False, []])
-    if debug: print('check_cache_fd_json - IS okay in cache')    
+    if debug: print('check_cache_fd_json - IS okay in cache')
+   
     fd = file_read_json(fname)
     if debug: print('Returning True from check_cache_fd_json')
     return([True, fd])
