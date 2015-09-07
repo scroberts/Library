@@ -17,6 +17,8 @@ import config as cf
 import tree
 import FileSys
 
+debug = False
+
 # References for DCC login
 # http://docs.python-requests.org/en/latest/user/quickstart/
 # http://docushare.xerox.com/en-us/Help/prog/prog5.htm
@@ -39,7 +41,7 @@ def add_docs_2_collections(s, docs, colls):
             url = cf.dcc_url + "/dsweb/COPY/" + d
             headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "DESTINATION": c}
             r = s.post(url, headers=headers)
-            print(r.text)
+            if debug: print(r.text)
             
 def change_owner(s, dochandle, userhandle):
     url = cf.dcc_url + "/dsweb/PROPPATCH/" + dochandle
@@ -49,8 +51,8 @@ def change_owner(s, dochandle, userhandle):
     xml += '''"/></entityowner></prop></set></propertyupdate>'''
     print(xml)
     r = s.post(url,data=xml,headers=headers)
-    print(r.text)
-    print(r.headers)
+    if debug: print(r.text)
+    if debug: print(r.headers)
     print("Owner Change Status Code:", r.status_code)
     
 def check_docs_in_coll(s, dl, cl):
@@ -127,17 +129,9 @@ def file_read_collection(coll):
     htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
     fh=open(cf.dccfilepath + htmlfile,'r',encoding='utf-8').read()
     dom = BeautifulSoup(fh)
-    clist = read_coll_content(dom)
+    clist = read_coll_cont(dom)
     return(clist)
-    
-def file_write_props(r, fname):
-    if not '.html' in fname:
-        fname = fname + '.html'
-    webfile = open(cf.dccfilepath + fname,'wb')
-    for chunk in r.iter_content(100000):
-        webfile.write(chunk)
-    webfile.close
-    
+
 def get_handle(url):
     #  Takes url such as 'https://docushare.tmt.org:443/File-501', returns 'Document-501'
     #  Replaces 'File' with 'Document'
@@ -210,11 +204,11 @@ def login(url):
         print('Login status code:', r.status_code)
     except:
         print("Unable to log in")
-        print("Status Code:", r.status_code)
+        print("Login status code:", r.status_code)
         exit(0)
         
     c = s.cookies
-    # print('Cookies:\n', c)
+    if debug: print('Cookies:\n', c)
     return s
     
 def mkCol(s,parentColl, collName, collDesc):
@@ -252,7 +246,7 @@ def prop_get(s, handle, **kwargs):
     
     url = cf.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    infoDic = { 'DocBasic':'<handle/><document/><getlastmodified/><size/><summary/>',
+    infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
@@ -260,7 +254,7 @@ def prop_get(s, handle, **kwargs):
                 'CollData' : '<title/><summary/><entityowner/><getlastmodified/>',
                 'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',
                 'Summary' : '<summary/>',
-                'DocAll' : '<title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><acl/><getlastmodified/><summary/><parents/><versions/>',
+                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><acl/><getlastmodified/><summary/><parents/><versions/>',
                 'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
@@ -270,38 +264,36 @@ def prop_get(s, handle, **kwargs):
     headers['Depth'] = depth
     
     if infoSet == 'CollCont':
-        froot = handle + '_' + infoSet + depth
+        fRoot = handle + '_' + infoSet + depth
     else:
-        froot = handle + '_' + infoSet
+        fRoot = handle + '_' + infoSet
     
-    if infoSet in infoDic:
-        xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
-        r = s.post(url,data=xml,headers=headers)
+    if infoSet == 'DocDate':
+        isCached = False
     else:
-        print('Calling without XML')
-        r = s.post(url,headers=headers)
+        [isCached, fd] = FileSys.check_cache_fd_json(s, handle, infoSet, fRoot)
+    
+    if not isCached and not retDom:
+        if debug: print('Calling DCC, InfoSet =', infoSet)
+        if infoSet in infoDic:
+            xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
+            r = s.post(url,data=xml,headers=headers)
+        else:
+            print('Calling without XML')
+            r = s.post(url,headers=headers)
+        if writeRes:
+            FileSys.file_write_props(r, fRoot)
+        dom = BeautifulSoup(r.text)
+        if retDom:
+            return(dom)
+        fd = prop_scrape(dom, infoSet, depth)
+        FileSys.file_write_json(fd, fRoot)
 
-    if writeRes:
-        file_write_props(r, froot)
-        
-    dom = BeautifulSoup(r.text)
-    if retDom:
-        return(dom)
-    fd = prop_scrape(dom, infoSet, depth)
-    FileSys.file_write_json(fd, froot, cf.dccfilepath)
-    
     return(fd)
     
 def prop_scrape(dom, infSet, depth):
     if infSet == 'DocBasic':
-        fd = {}
-        fd['title'] = dom.displayname.text
-        fd['filename'] = dom.document.text
-        fd['handle'] = dom.dsref['handle']
-        fd['author'] = dom.author
-        fd['date'] = dom.getlastmodified.text
-        fd['size'] = int(dom.size.text)
-        fd['tmtnum'] = dom.summary.text
+        fd = read_doc_basic_data(dom)
     elif infSet == 'DocDate':
         date = dom.getlastmodified.text
         fd = {'date':date}
@@ -320,7 +312,7 @@ def prop_scrape(dom, infSet, depth):
     elif infSet == 'CollData':
         fd = read_coll_data(dom)
     elif infSet == 'CollCont':     
-        fd = read_coll_content(dom)
+        fd = read_coll_cont(dom)
     elif infSet == 'Perms':
         fd = read_doc_perms(dom)
     return(fd) 
@@ -364,13 +356,17 @@ def print_coll_parents(fd):
     for p in fd:
         print("  [",p[0],"], \"", p[1], "\"", sep = "")
 
-def print_doc_basic_info(fd):    
+def print_doc_basic(fd):    
     print("DCC Title: ", fd['title'])
+    print("TMT Document Number: ", fd['tmtnum'])
     print("DCC Document Handle/FileName: ", fd['handle'],", \"",fd['filename'],"\"",sep="")
-    print("DCC Date: ", fd['date'])
+    print("DCC Date: ", fd['modified'])
+    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("Author: ", fd['author'], sep="")
+    print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
     print("Size: ", fd['size'])
     
-def print_doc_data(fd):
+def print_doc_all(fd):
     print("\n\n*** Document Entry", fd['dccnum'], "***\n")
     print("TMT Document Number: ", fd['tmtnum'])
     print("DCC Document Number/Name: ", fd['dccnum'],", \"",fd['dccname'],"\"",sep="")
@@ -378,9 +374,10 @@ def print_doc_data(fd):
     print("File Name: ", "\"",fd['filename'],"\"", sep = "")
     print("Modified Date: ", fd['modified'])
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("Author: ", fd['author'], sep="")
     print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
     print("Last Modified: ", fd['date'])
-    print_perm_info(fd['permissions'])
+    print_perm(fd['permissions'])
     print("\nLocations...")
     for loc in sorted(fd['locations'], key = lambda x: x[0]):
         print(loc[0],", \"",loc[1],"\"", sep="")
@@ -389,7 +386,7 @@ def print_doc_data(fd):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['dccnum'], "***\n")
     
-def print_perm_info(permlist):
+def print_perm(permlist):
     print("Permissions...")
     for perm in sorted(permlist, key = lambda x: x["handle"]):
         print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
@@ -403,7 +400,7 @@ def print_perm_info(permlist):
             print("[Manage]", end="")
         print(", \"",perm['name'],"\"",sep="")
 
-def print_ver_info(fd):
+def print_ver(fd):
     print("\n\n*** Version Entry", fd['dccver'], "***\n")
     print("Version: ", fd['dccver'])
     print("Version Number: ",fd['dccvernum'])
@@ -414,7 +411,7 @@ def print_ver_info(fd):
     print("Parent Document Title:", "\"", fd['dcctitle'], "\"", sep = "")
     print("\n*** End Version Entry", fd['dccver'], "***\n")
 
-def read_coll_content(dom):
+def read_coll_cont(dom):
 # Used for depth of '1' or 'infinity'
     clist = []
     for res in dom.find_all("response"):
@@ -446,6 +443,24 @@ def read_coll_data(dom):
     fd['owner-userid'] = dom.entityowner.dsref['handle']
     return(fd)
     
+def read_doc_basic_data(dom):
+    fd = {}
+    fd['title'] = dom.displayname.text
+    fd['dccname'] = dom.displayname.text
+    fd['dccnum'] = get_handle(dom.handle.dsref['handle'])
+    fd['tmtnum'] = dom.summary.text
+    fd['filename'] = dom.document.text
+    fd['handle'] = get_handle(dom.dsref['handle'])
+    fd['date'] = dom.getlastmodified.text
+    fd['modified'] = dom.getlastmodified.text
+    fd['owner-name'] = dom.entityowner.displayname.text
+    fd['owner-username'] = dom.entityowner.username.text
+    fd['owner-userid'] = dom.entityowner.dsref['handle']
+    fd['author'] = dom.author.text
+    fd['keywords'] = dom.keywords.text
+    fd['size'] = int(dom.size.text)
+    return(fd)
+
 def read_doc_data(dom):
     # fill in file data dictionary
     fd = {}
@@ -458,6 +473,7 @@ def read_doc_data(dom):
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
     fd['owner-userid'] = dom.entityowner.dsref['handle']
+    fd['author'] = dom.author.text
     fd['keywords'] = dom.keywords.text
     fd['date'] = dom.getlastmodified.text
     fd['locations'] = []
@@ -539,11 +555,72 @@ def set_permissions(s,handle,fd):
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
 
-             
+
+def test_version():
+    # Login to DCC
+    s = login(cf.dcc_url + cf.dcc_login)
+
+    handle = 'Version-32465'
+    fd = prop_get(s, handle, InfoSet = 'VerAll', WriteProp = True)
+    print_ver(fd)
+    
+
+def test_props():
+    # Login to DCC
+    s = login(cf.dcc_url + cf.dcc_login)
+
+    collhandle = 'Collection-7337'
+    # collhandle = 'Collection-10259'
+    collhandle = 'Collection-286'
+    collhandle = 'Collection-10259'
+    dochandle = 'Document-2688'
+    verhandle = 'Version-49414'
+    
+    start = time.time()
+
+    print('Call 1')
+    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True)
+    print_doc_all(fd)
+
+    print('Call 2')
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True)
+    print_doc_basic(fd)
+
+    print('Call 3')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True)
+    print_coll_data(fd)
+
+    print('Call 4')
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True)
+    print_coll_info(fd)
+
+    print('Call 5')
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True)
+    print_coll_info(fd)
+
+    print('Call 6')
+    fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True)
+    print_coll_parents(fd)
+
+    print('Call 7')
+    fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True)
+    print_coll_children(fd)
+    
+    print('Call 8')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True)
+    fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True)
+    fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True)
+    
+    print(fd)
+
+    end = time.time()
+
+    print('Execution time in seconds:', end - start)
+
+           
 if __name__ == '__main__':
     print("Running module test code for",__file__)
+#     test_props()
+    test_version()
 
-#     testGetProps()
-#     testGetBasicInfo()
-#     testTraverse()
-    testGetColl()
+

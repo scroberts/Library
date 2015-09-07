@@ -12,18 +12,74 @@ import DCC
 import config as cf
 import tree
 
-def file_write_json(obj, fname, path = './'):
+debug = False
+cacheMode = 'NoDateCheck'
+
+def check_date_okay(dccDate, osSecs):
+    dccSecs = (datetime.strptime(dccDate,'%a, %d %b %Y %H:%M:%S %Z') - datetime(1970,1,1)).total_seconds()
+    if dccSecs < osSecs:
+        if debug: print('Cache date okay')
+        return(True)
+    if debug: print('Cache out of date')
+    return(False)
+    
+def check_cache_okay(s, handle, dccDate, fname, path = cf.dccfilepath):
+    if not os.path.isfile(path+fname):
+        return(False)
+    if debug: print('File Exists')
+    if not check_date_okay(dccDate, os.path.getctime(path+fname)):
+        return(False)
+    return(True)
+
+def check_cache_fd_json(s, handle, infoSet, fname, path = cf.dccfilepath):
     if not '.json' in fname:
         fname = fname + '.json'
+    if cacheMode == 'NoDateCheck':
+        dccDate = "Sat, 01 Jan 2000 00:00:00 GMT"
+    else:
+        fd = DCC.prop_get(s, handle, InfoSet = 'DocDate')
+        dccDate = fd['date']
+    if not check_cache_okay(s, handle, dccDate, fname):
+        print('check_cache_fd_json - NOT okay in cache')
+        return([False, []])
+    if debug: print('check_cache_fd_json - IS okay in cache')    
+    fd = file_read_json(fname)
+    if debug: print('Returning True from check_cache_fd_json')
+    return([True, fd])
+    
+def test_cache():
+    # Login to DCC
+    s = DCC.login(cf.dcc_url + cf.dcc_login)
+    handle = 'Collection-286' 
+    fname = 'Collection-286_CollData'
+    
+    [flag, fd] = check_cache_fd_json(s, handle, 'CollData', fname)
+    print(flag, fd)
+
+def file_write_props(r, fname, path = cf.dccfilepath):
+    if not '.html' in fname:
+        fname = fname + '.html'
+    webfile = open(cf.dccfilepath + fname,'wb')
+    for chunk in r.iter_content(100000):
+        webfile.write(chunk)
+    webfile.close
+
+def file_write_json(obj, fname, path = cf.dccfilepath):
+    if not '.json' in fname:
+        fname = fname + '.json'
+    if debug: print('writing', path+fname)
     fh = open(path+fname,'w')
     json.dump(obj, fh)
     fh.close()
     
-def file_read_json(fname, path = './'):
-    print('fname = ', fname)
+def file_read_json(fname, path = cf.dccfilepath):
+    if not '.json' in fname:
+        fname = fname + '.json'
+    if debug: print('reading', path+fname)
     fh = open(path+fname,'r')
-    obj = fson.load(fh)
+    obj = json.load(fh)
     fh.close
+    return(obj)
 
 def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     # traverse follows the collection structure on the DCC and replicates it on the local disk
@@ -103,5 +159,5 @@ def testTraverse():
     
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    
-    testTraverse()
+    test_cache()   
+#     testTraverse()
