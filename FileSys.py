@@ -40,7 +40,7 @@ def check_cache_fd_json(s, handle, infoSet, fname, path = cf.dccfilepath):
         fd = DCC.prop_get(s, handle, InfoSet = 'DocDate')
         dccDate = fd['date']
     if not check_cache_okay(s, handle, dccDate, fname):
-        print('check_cache_fd_json - NOT okay in cache')
+        if debug: print('check_cache_fd_json - NOT okay in cache')
         return([False, []])
     if debug: print('check_cache_fd_json - IS okay in cache')    
     fd = file_read_json(fname)

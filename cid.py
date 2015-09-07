@@ -170,11 +170,9 @@ def gen_ss_cid(s, dl):
     for d in dl:
         ssrow = []
         print("trying", d)
-        dom = DCC.prop_get(s,d,InfoSet = 'DocAll', WriteProp = True, RetDom = True)
-        if d.find("Document") >= 0:
+        if 'Document-' in d:
             # CID link is to a document Handle
-            doc = DCC.read_doc_data(dom)
-            cidlink = doc
+            doc = DCC.prop_get(s,d,InfoSet = 'DocAll', WriteProp = True)
             # Now read preferred version
             prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll', WriteProp = True)
             # Subject Document
@@ -199,10 +197,9 @@ def gen_ss_cid(s, dl):
             print(doc['dccnum'], doc['dccname'], doc['tmtnum'], doc['owner-username'])
             print("Doc Ref")
             print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])
-        elif d.find("Version") >= 0:
+        elif 'Version-' in d:
             # CID link is to a version handle
-            ver = DCC.read_ver_data(dom)
-            cidlink = ver
+            ver = DCC.prop_get(s,d,InfoSet = 'VerAll', WriteProp = True)
             doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocAll', WriteProp = True)
             # Subject Document
             ssrow.append(doc['dccnum'])
