@@ -12,7 +12,7 @@ from openpyxl.styles.colors import BLUE
 import DCC
 import GetUrlWord
 import Config as CF
-import myutil
+import MyUtil
 
 # Set Excel Styles
 # Excel hyperlink style is calibri 11, underline blue
@@ -303,7 +303,7 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
 
     ## Remove the files that are currently located in the collection for the CID
 
-    if myutil.get_yn('Remove location (not delete) of files from ' + CID_coll[0] +'(Y/N)?: '):
+    if MyUtil.get_yn('Remove location (not delete) of files from ' + CID_coll[0] +'(Y/N)?: '):
         doclist = DCC.list_obj_in_coll(s, CID_coll[0],Print=True,Jwrite=False,Depth='infinity',Type='Doc',WriteProp=False)
         for doc in doclist:
             DCC.dcc_remove_doc_from_coll(s, doc, CID_coll[0])
@@ -313,7 +313,7 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
     dl = json.load(fh)
     fh.close()
 
-    if myutil.get_yn('Add CID files to ' + CID_coll[0] +' (Y/N)?: '):
+    if MyUtil.get_yn('Add CID files to ' + CID_coll[0] +' (Y/N)?: '):
         DCC.add_docs_2_collections(s, dl, CID_coll)
 
     # Check that the expected docs are in the collection
