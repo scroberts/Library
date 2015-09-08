@@ -165,7 +165,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
 
 def create_DCC_mirror(s, dcc_handle, dirpath, **kwargs):
     tr = Tree.get_tree(s,dcc_handle)
-    Tree.print_tree(tr)
+    Tree.print_tree(s, tr)
     docList = Tree.get_flat_tree(tr)
     traverse(s, tr, tr['root']['collections'][0], dirpath, **kwargs)
     

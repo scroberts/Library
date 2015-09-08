@@ -19,17 +19,25 @@ def flat_tree(tree, key, list):
     return(list)   
     
 
-def iter_print_tree(tree, key, indent):
+def iter_print_tree(s, tree, key, indent):
     branch = tree[key]
     for doc in branch['documents']:
-        print(indent+doc) 
+        nameData = DCC.prop_get(s, doc, InfoSet = 'Title')
+        print(indent+doc, ':', nameData['title']) 
     for other in branch['others']:
-        print(indent+other)
+        nameData = DCC.prop_get(s, other, InfoSet = 'Title')
+        print(indent+other, ':', nameData['title'])        
     for col in branch['collections']:
-        print(indent+col)
-        iter_print_tree(tree, col, indent+'    ')
+        nameData = DCC.prop_get(s, col, InfoSet = 'Title')
+        print(indent+col, ':', nameData['title'])   
+        iter_print_tree(s, tree, col, indent+'    ')
 
-def build_tree(s, keyname, target, tree):
+def build_tree(s, keyname, target, tree, **kwargs):
+    # kwargs options:
+    #  Exclude - List of handles to not be included in the tree
+    
+    excludeList = kwargs.get('Exclude',[])
+
     documents = []
     collections = []
     others = []
@@ -39,16 +47,16 @@ def build_tree(s, keyname, target, tree):
 
     for idx,d in enumerate(fd):
         handle = d['name'][1]
-
-        if idx == 0:
-            dict['parent'] = handle
-        else:
-            if 'Document' in handle:
-                documents.append(handle)
-            elif 'Collection' in handle:
-                collections.append(handle)
+        if not handle in excludeList:
+            if idx == 0:
+                dict['parent'] = handle
             else:
-                others.append(handle)
+                if 'Document' in handle:
+                    documents.append(handle)
+                elif 'Collection' in handle:
+                    collections.append(handle)
+                else:
+                    others.append(handle)
 
     dict['collections'] = collections
     dict['documents'] = documents
@@ -56,14 +64,15 @@ def build_tree(s, keyname, target, tree):
 
     tree[keyname] = dict
     for col in collections:
-        tree = build_tree(s, col, col, tree)
+        if not col in excludeList:
+            tree = build_tree(s, col, col, tree, **kwargs)
     return(tree)
   
-def print_tree(tree):
-    iter_print_tree(tree, 'root', '')
+def print_tree(s,tree):
+    iter_print_tree(s, tree, 'root', '')
 
-def get_tree(s, collhandle):
-    return(build_tree(s, collhandle, collhandle, build_root(collhandle)))
+def get_tree(s, collhandle, **kwargs):
+    return(build_tree(s, collhandle, collhandle, build_root(collhandle), **kwargs))
     
 def get_flat_tree(tree):
     fl = flat_tree(tree, 'root', [])    
@@ -75,14 +84,15 @@ def build_root(collhandle):
     return(tree)
 
 def test_tree():
-    collhandle = 'Collection-10259'
+    collhandle = 'Collection-286'
+    exclude = ['Collection-7337','Document-21244', 'Document-26018']
 
     # Login to DCC
     s = DCC.login(CF.dcc_url + CF.dcc_login)
 
-    
-    tree = get_tree(s, collhandle)
-    print_tree(tree)
+    print('excluding:',exclude)
+    tree = get_tree(s, collhandle, Exclude = exclude)
+    print_tree(s,tree)
     
     print('\n\n')
     for branch in tree:

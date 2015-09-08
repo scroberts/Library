@@ -251,7 +251,7 @@ def prop_get(s, handle, **kwargs):
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
-                'Group': '<handle/>',
+                'Title': '<handle/>',
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
@@ -312,21 +312,19 @@ def prop_print(infoSet, fd):
     elif infoSet == 'Parents':
         print_parents(fd)
     elif infoSet == 'Children':
-        print(fd)
         print_children(fd)
     elif infoSet == 'DocAll':
         print_doc_all(fd)
     elif infoSet == 'VerAll':
         print_ver(fd)
     elif infoSet == 'CollData':
-        print(fd)
         print_coll_data(fd)
     elif infoSet == 'CollCont':     
         print_coll_cont(fd)
     elif infoSet == 'Perms':
         print_perms(fd)
-    elif infoSet == 'Group':
-        print_group(fd)
+    elif infoSet == 'Title':
+        print_title(fd)
 
 def prop_scrape(dom, infoSet, printFlag):
     if infoSet == 'DocBasic':
@@ -353,8 +351,8 @@ def prop_scrape(dom, infoSet, printFlag):
         fd = read_coll_cont(dom)
     elif infoSet == 'Perms':
         fd = read_doc_perms(dom)
-    elif infoSet == 'Group':
-        fd = read_group(dom)
+    elif infoSet == 'Title':
+        fd = read_title(dom)
     return(fd) 
     
 def print_children(fd):
@@ -427,7 +425,7 @@ def print_doc_all(fd):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
     
-def print_group(fd):
+def print_title(fd):
     print("\nHandle: ", fd['handle'])
     print("Name: ", fd['title'])
     
@@ -551,7 +549,7 @@ def read_doc_perms(dom):
             pass
     return(perms)
     
-def read_group(dom):
+def read_title(dom):
     # fill in data dictionary
     fd = {}
     fd['title'] = dom.displayname.text
