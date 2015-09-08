@@ -65,7 +65,10 @@ def check_criteria(perm, action):
     cFlag = True
     for crit,val in action['Criteria'].items():
 #         print('Criteria: ', crit, val)
-        if crit == 'HandleContains' and not val in perm['handle']:
+        if crit == 'HandleMatches' and not val == perm['handle']:
+#             print('Fail on HandleMatches')
+            cFlag = False
+        if crit == 'HandlePattern' and not val in perm['handle']:
 #             print('Fail on HandleContains')
             cFlag = False
         if crit == 'Absent' and val in perm['handle']:
@@ -92,16 +95,19 @@ def modify_dcc_perms(s,handle,perms):
         DCC.set_permissions(s, handle, perms)
 
 def fixPerm(s, handle, actions):
+
+    print('\n##############       ENTRY       ##############')
     if 'Document-' in handle:
         fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic', Print = True)
     elif 'Collection-' in handle:
         fd = DCC.prop_get(s, handle, InfoSet = 'CollData', Print = True)
     else:
-        print('Not Document or Collection, not touching')
+        nameData = DCC.prop_get(s, handle, InfoSet = 'Title')
+        print('Not Document or Collection:', handle, ':', nameData['title'])
         
     perms = DCC.prop_get(s, handle, InfoSet = 'Perms', Print = True)
-    print('#################### ENTRY ####################')
     
+    print('')
     removelist = []
     addlist = []
        
@@ -249,32 +255,55 @@ def testFixPerm():
     s = DCC.login(CF.dcc_url + CF.dcc_login)
      
     collhandle = 'Collection-286'
-    exclude = ['Collection-7337','Document-21244', 'Document-26018']
+#     exclude = ['Collection-7337','Document-21244', 'Document-26018']
+    exclude = []
 
-    print('excluding from Tree:',exclude)
-    tree = Tree.get_tree(s, collhandle, Exclude = exclude)
-    Tree.print_tree(s,tree)
-    
-    print('\n\n')
-    for branch in tree:
-        print(branch+': ',tree[branch])
+#     print('excluding from Tree:',exclude)
+#     tree = Tree.get_tree(s, collhandle, Exclude = exclude)
+#     Tree.print_tree(s,tree)
+#     flatTree = Tree.flat_tree(tree, 'root', [])    
     
 #     collhandle = 'Collection-10892'
 #     dochandle = 'Document-27819'
-#     dochandle = 'Document-2688'
-#     collhandle = 'Collection-10892'
+    dochandle = 'Document-8865'
+    collhandle = 'Collection-8279'
     
     actions = [ {'Criteria' : {'HandleContains' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
                 {'Criteria' : {'HandleContains' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325'], 'Action' : 'Remove'},
                 {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
                 {'Criteria' : {'HandleContains' : 'Group-4'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'Group-536'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-1083'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-21'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-2'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-1087'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-120'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-1165'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleContains' : 'User-383'}, 'Action' : 'Remove'},
                 {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
                 {'Criteria' : {'Absent' : 'Group-103'}, 'Action' : 'Add', 'Handle': 'Group-103', 'Perms' : {'Read':True, 'Write':True}}]
 
-    flatTree = Tree.flat_tree(tree, 'root', [])
+    actions = [ {'Criteria' : {'HandlePattern' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandlePattern' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325'], 'Action' : 'Remove'},
+                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'Group-4'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'Group-536'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-1083'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-21'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-2'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-1087'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-120'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-1165'}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandleMatches' : 'User-383'}, 'Action' : 'Remove'},
+                {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
+                {'Criteria' : {'Absent' : 'Group-103'}, 'Action' : 'Add', 'Handle': 'Group-103', 'Perms' : {'Read':True, 'Write':True}}]
+
+
     
-    for handle in flatTree:
-        fixPerm(s,handle, actions)
+#     for handle in flatTree:
+#         fixPerm(s,handle, actions)
+
+    fixPerm(s,collhandle,actions)
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
