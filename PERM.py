@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 # external modules
+import sys
 
 # my modules
 import DCC
 import Config as CF
 import Tree
-import sys
+import MyUtil
 
 def printCheckCriteria(target, permissions):
     setnum = 0
@@ -56,18 +57,102 @@ def printCheckPerms(perm,plist):
     
     return perms_okay
 
-def fixPerm(s,handle):
+action = {'Criteria' : {'HandleContains' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'}
+
+
+def check_criteria(perm, action):
+    PermReadFlag = perm.get('Read',False)
+    PermWriteFlag = perm.get('Write',False)
+    PermManageFlag = perm.get('Manage',False)
+    PermSearchFlag = perm.get('Search',False)
+    
+    cFlag = True
+    for crit,val in action['Criteria'].items():
+#         print('Criteria: ', crit, val)
+        if crit == 'HandleContains' and not val in perm['handle']:
+#             print('Fail on HandleContains')
+            cFlag = False
+        if crit == 'Absent' and val in perm['handle']:
+            cFlag = False
+        if crit == 'Search' and not val == PermSearchFlag:
+#             print('Fail on ReadFlag')
+            cFlag = False 
+        if crit == 'Read' and not val == PermReadFlag:
+#             print('Fail on ReadFlag')
+            cFlag = False 
+        if crit == 'Write' and not val == PermWriteFlag:
+#             print('Fail on WriteFlag')
+            cFlag = False 
+        if crit == 'Manage' and not val == PermManageFlag:
+#             print('Fail on ManageFlag')
+            cFlag = False             
+                       
+    return(cFlag)
+
+def modify_dcc_perms(s,handle,perms):
+    print('Modifying Permissions to:',handle)
+    DCC.print_perms(perms)       
+    if MyUtil.get_yn('Change Permissions (Y/N)?'):
+        print('Changing permissions...')
+        DCC.set_permissions(s, handle, perms)
+
+def fixPerm(s, handle, actions):
     if 'Document-' in handle:
         fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic', Print = True)
-        fd['permissions'] = DCC.prop_get(s, handle, InfoSet = 'Perms', Depth = '0', Print = True)
   
     elif 'Collection-' in handle:
         fd = DCC.prop_get(s, handle, InfoSet = 'CollData', Print = True)
-        fd['permissions'] = DCC.prop_get(s, handle, InfoSet = 'Perms', Depth = '0', Print = True)
 
     else:
         print('Not Document or Collection, not touching')
-
+        
+    perms = DCC.prop_get(s, handle, InfoSet = 'Perms', Depth = '0', Print = True)
+#     print(perms)
+    
+    removelist = []
+    addlist = []
+    for action in actions:
+            if action['Action'] == 'Remove':
+                for perm in perms:
+                    cFlag = check_criteria(perm, action)
+        #             print('\n',perm, action, cFlag)
+                    if cFlag == True:
+                        print('\nModify: ',action['Action'],':',perm['handle'],':',perm['name'],sep='')
+                        removelist.append(perm)
+            if action['Action'] == 'Add':
+                addFlag = True
+                for perm in perms:
+                    if not check_criteria(perm, action):
+                        addFlag = False
+                if addFlag:
+                    pEntry = {}
+                    print('\nModify: ',action['Action'],action['Handle'],action['Perms'],end='')
+                    pEntry['handle'] = action['Handle']
+                    grpdata = DCC.prop_get(s, pEntry['handle'], InfoSet = 'Group')
+                    pEntry['name'] = grpdata['title']
+                    if 'Read' in action['Perms']:
+                        pEntry['Read'] = action['Perms']['Read']
+                    if 'Write' in action['Perms']:
+                        pEntry['Write'] = action['Perms']['Write']
+                    if 'Manage' in action['Perms']:
+                        pEntry['Manage'] = action['Perms']['Manage']
+                    addlist.append(pEntry)  
+    print('\n')     
+    changeFlag = False
+    
+    for perm in removelist:
+        print('Remove?: ',perm['handle'],':',perm['name'])
+        if MyUtil.get_yn('(Y/N)?'):
+            changeFlag = True
+            MyUtil.remove_dict_from_list(perms,'handle',perm['handle'])
+    for perm in addlist:
+        print('Add?:', perm)
+        if MyUtil.get_yn('(Y/N)?'):
+            changeFlag = True
+            perms.append(perm)
+    
+    if changeFlag:
+        modify_dcc_perms(s,handle,perms)
 
 def checkPerms(target, permissions):
     # Login to DCC
@@ -169,10 +254,18 @@ def testPerm():
 def testFixPerm():
     # Login to DCC
     s = DCC.login(CF.dcc_url + CF.dcc_login)
-    collhandle = 'Collection-10071'
-    dochandle = 'Document-21380'
-    fixPerm(s,collhandle)
-    fixPerm(s,dochandle)
+    collhandle = 'Collection-10892'
+    dochandle = 'Document-27819'
+    
+    # remove entry if user only has read
+
+    actions = [{'Criteria' : {'HandleContains' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
+                {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
+                {'Criteria' : {'Absent' : 'User-1083'}, 'Action' : 'Add', 'Handle': 'User-1083', 'Perms' : {'Read':True, 'Write':True}}]
+
+    print('fixPerm call')
+    fixPerm(s,collhandle, actions)
+    fixPerm(s,dochandle, actions)
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)

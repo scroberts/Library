@@ -239,6 +239,7 @@ def prop_get(s, handle, **kwargs):
     #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
     #  InfoSet = DocDate - Document last modified date
+    #  InfoSet = Group - Information about a Group or User
     #  InfoSet = Parents - Locations of documents or collections
     #  InfoSet = Perms - Document Permissions
     #  InfoSet = VerAll - All Version information
@@ -250,6 +251,7 @@ def prop_get(s, handle, **kwargs):
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
+                'Group': '<handle/>',
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
@@ -260,6 +262,7 @@ def prop_get(s, handle, **kwargs):
                 'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
+    if debug: print('infoSet:',infoSet)
     writeRes = kwargs.get('WriteProp', False)
     retDom = kwargs.get('RetDom',False)
     depth = kwargs.get('Depth','0') 
@@ -270,13 +273,16 @@ def prop_get(s, handle, **kwargs):
         fRoot = handle + '_' + infoSet + depth
     else:
         fRoot = handle + '_' + infoSet
+        
+    if debug: print('fRoot:', fRoot)
     
     if infoSet == 'DocDate':
         isCached = False
     else:
         [isCached, fd] = FileSys.check_cache_fd_json(s, handle, infoSet, fRoot)
+        if debug: print('isCached:', isCached)
     
-    if not isCached and not retDom:
+    if not isCached:
         if debug: print('Calling DCC, InfoSet =', infoSet)
         if infoSet in infoDic:
             xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
@@ -294,6 +300,7 @@ def prop_get(s, handle, **kwargs):
 
     if printFlag: 
         prop_print(infoSet,fd)
+        
     return(fd)
     
 def prop_print(infoSet, fd):
@@ -318,32 +325,36 @@ def prop_print(infoSet, fd):
         print_coll_cont(fd)
     elif infoSet == 'Perms':
         print_perms(fd)
+    elif infoSet == 'Group':
+        print_group(fd)
 
-def prop_scrape(dom, infSet, printFlag):
-    if infSet == 'DocBasic':
+def prop_scrape(dom, infoSet, printFlag):
+    if infoSet == 'DocBasic':
         fd = read_doc_basic_data(dom)
-    elif infSet == 'DocDate':
+    elif infoSet == 'DocDate':
         date = dom.getlastmodified.text
         fd = {'date':date}
-    elif infSet == 'Parents':
+    elif infoSet == 'Parents':
         fd = []
         for par in dom.find("parents").find_all("dsref"):
             fd.append([par['handle'],par.displayname.text])
-    elif infSet == 'Children':
+    elif infoSet == 'Children':
         fd = []
         for par in dom.find("children").find_all("dsref"):
             fd.append([get_handle(par['handle']),par.displayname.text])
-    elif infSet == 'DocAll':
+    elif infoSet == 'DocAll':
         fd = read_doc_data(dom)
-    elif infSet == 'VerAll':
+    elif infoSet == 'VerAll':
         fd = read_ver_data(dom)   
         if printFlag: print_ver(fd)
-    elif infSet == 'CollData':
+    elif infoSet == 'CollData':
         fd = read_coll_data(dom)
-    elif infSet == 'CollCont':     
+    elif infoSet == 'CollCont':     
         fd = read_coll_cont(dom)
-    elif infSet == 'Perms':
+    elif infoSet == 'Perms':
         fd = read_doc_perms(dom)
+    elif infoSet == 'Group':
+        fd = read_group(dom)
     return(fd) 
     
 def print_children(fd):
@@ -415,6 +426,10 @@ def print_doc_all(fd):
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
+    
+def print_group(fd):
+    print("\nHandle: ", fd['handle'])
+    print("Name: ", fd['title'])
     
 def print_perms(permlist):
     print("\nPermissions...")
@@ -535,6 +550,13 @@ def read_doc_perms(dom):
         except:
             pass
     return(perms)
+    
+def read_group(dom):
+    # fill in data dictionary
+    fd = {}
+    fd['title'] = dom.displayname.text
+    fd['handle'] = get_handle(dom.handle.dsref['handle'])
+    return(fd)
     
 def read_ver_data(dom):
     # fill in file data dictionary
@@ -667,11 +689,18 @@ def test_props():
 
     print('Execution time in seconds:', end - start)
 
-           
+def test_user_group():
+    # Login to DCC
+    s = login(CF.dcc_url + CF.dcc_login)
+
+    grp = 'Group-325'
+    fd = prop_get(s, grp, InfoSet = 'Group', Print = True, WriteProp = True)
+
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_props()
-    test_version()
-    test_change_owner()
+#     test_props()
+#     test_version()
+#     test_change_owner()
+    test_user_group()
 
 

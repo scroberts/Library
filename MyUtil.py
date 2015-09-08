@@ -19,8 +19,8 @@ def get_yn(question):
 
 def remove_dict_from_list(thelist, key, value):
     # removes dictionaries containing the supplied key/value from a list of dictionaries
+    # note that lists are passed by reference so the input list is changed
     thelist[:] = [d for d in thelist if d.get(key) != value]
-    return(thelist)
     
 def mod_dict_in_list(thelist, checkkey, checkvalue, changekey, changevalue):
     # modifies entries in a list of dictionaries based on check criteria

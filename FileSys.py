@@ -34,12 +34,17 @@ def check_date_okay(dccDate, osSecs):
     if debug: print('Cache out of date')
     return(False)
     
-def check_cache_okay(s, handle, dccDate, fname, path = CF.dccfilepath):
+def check_cache_okay(s, handle, fname, path = CF.dccfilepath):
     if not '.json' in fname:
         fname = fname + '.json' 
     if not os.path.isfile(path+fname):
         return(False)
     if debug: print('File Exists')
+    if 'NoDateCheck' in cacheMode or 'All' in cacheMode:
+        dccDate = "Sat, 01 Jan 2000 00:00:00 GMT"
+    else:
+        fd = DCC.prop_get(s, handle, InfoSet = 'DocDate')
+        dccDate = fd['date']
     if not check_date_okay(dccDate, os.path.getctime(path+fname)):
         return(False)
     return(True)
@@ -52,14 +57,8 @@ def check_cache_fd_json(s, handle, infoSet, fname, path = CF.dccfilepath):
     if 'Normal' in cacheMode:
         if infoSet in ['Children', 'CollCont', 'DocDate', 'Parents', 'Perms']:
             return([False, []])
-        
-    if 'NoDateCheck' in cacheMode or 'All' in cacheMode:
-        dccDate = "Sat, 01 Jan 2000 00:00:00 GMT"
-    else:
-        fd = DCC.prop_get(s, handle, InfoSet = 'DocDate')
-        dccDate = fd['date']
                 
-    if not check_cache_okay(s, handle, dccDate, fname):
+    if not check_cache_okay(s, handle, fname):
         if debug: print('check_cache_fd_json - NOT okay in cache')
         return([False, []])
     if debug: print('check_cache_fd_json - IS okay in cache')
