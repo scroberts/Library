@@ -239,9 +239,10 @@ def prop_get(s, handle, **kwargs):
     #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
     #  InfoSet = DocDate - Document last modified date
-    #  InfoSet = Group - Information about a Group or User
+    #  InfoSet = Group - Group information
     #  InfoSet = Parents - Locations of documents or collections
     #  InfoSet = Perms - Document Permissions
+    #  InfoSet = User - User information
     #  InfoSet = VerAll - All Version information
     #  RetDom - Return BeautifulSoup object rather than file data structure
     #  WriteProp = (True|False) - Write .html to disk?
@@ -251,7 +252,10 @@ def prop_get(s, handle, **kwargs):
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
+                'Group': '<entityowner/><handle/><parents/><children/>',
+                'User': '<entityowner/><handle/><parents/>',
                 'Title': '<handle/>',
+                'User': '<entityowner/><handle/><parents/>',
                 'Parents': '<parents/>',
                 'Children' : '<children/>',
                 'Perms': '<private/><acl/>',
@@ -325,6 +329,10 @@ def prop_print(infoSet, fd):
         print_perms(fd)
     elif infoSet == 'Title':
         print_title(fd)
+    elif infoSet == 'Group':
+        print_group(fd)
+    elif infoSet == 'User':
+        print_user(fd)
 
 def prop_scrape(dom, infoSet, printFlag):
     if infoSet == 'DocBasic':
@@ -353,6 +361,10 @@ def prop_scrape(dom, infoSet, printFlag):
         fd = read_doc_perms(dom)
     elif infoSet == 'Title':
         fd = read_title(dom)
+    elif infoSet == 'Group':
+        fd = read_group(dom)
+    elif infoSet == 'User':
+        fd = read_user(dom)
     return(fd) 
     
 def print_children(fd):
@@ -390,10 +402,12 @@ def print_coll_cont_entry(indent,c):
     print(indent,"Last Modified: ", c['date'], sep = "")
     print(indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
     
-def print_parents(fd):   
-    print("\nParents...")
-    for p in fd:
-        print("  [",p[0],"], \"", p[1], "\"", sep = "")
+def print_group(fd):
+    print("\nHandle: ", fd['handle'])
+    print("Name: ", fd['title'])
+    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print_parents(fd['parents'])
+    print_children(fd['children'])
 
 def print_doc_basic(fd):    
     print("\nDCC Title: ", fd['title'])
@@ -424,24 +438,40 @@ def print_doc_all(fd):
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
-    
+      
+def print_perm(perm, **kwargs):
+    print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
+    if "Search" in perm.keys():
+        print("[Search]", end="")
+    if "Read" in perm.keys():
+        print("[Read]", end="")
+    if "Write" in perm.keys():
+       print("[Write]", end="")
+    if "Manage" in perm.keys():
+        print("[Manage]", end="")
+    print(", \"",perm['name'],"\"",sep="",end="")
+    if kwargs.get('LF',False):
+        print('')
+ 
+def print_parents(fd):   
+    print("\nParents...")
+    for p in fd:
+        print("  [",p[0],"], \"", p[1], "\"", sep = "") 
+
+def print_perms(permlist):
+    print("\nPermissions...")
+    for perm in sorted(permlist, key = lambda x: x["handle"]):
+        print_perm(perm)
+        print("")    
+        
 def print_title(fd):
     print("\nHandle: ", fd['handle'])
     print("Name: ", fd['title'])
     
-def print_perms(permlist):
-    print("\nPermissions...")
-    for perm in sorted(permlist, key = lambda x: x["handle"]):
-        print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
-        if "Search" in perm.keys():
-            print("[Search]", end="")
-        if "Read" in perm.keys():
-            print("[Read]", end="")
-        if "Write" in perm.keys():
-           print("[Write]", end="")
-        if "Manage" in perm.keys():
-            print("[Manage]", end="")
-        print(", \"",perm['name'],"\"",sep="")
+def print_user(fd):
+    print("\nHandle: ", fd['handle'])
+    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print_parents(fd['parents'])
 
 def print_ver(fd):
     print("\n*** Version Entry", fd['dccver'], "***\n")
@@ -549,11 +579,39 @@ def read_doc_perms(dom):
             pass
     return(perms)
     
+def read_group(dom):
+    fd = {}
+    fd['handle'] = dom.handle.dsref['handle']
+    fd['title'] = dom.handle.displayname.text
+    fd['owner-name'] = dom.entityowner.displayname.text
+    fd['owner-username'] = dom.entityowner.username.text
+    fd['owner-userid'] = dom.entityowner.dsref['handle']
+    
+    fd['parents'] = []
+    for par in dom.find("parents").find_all("dsref"):
+        fd['parents'].append([par['handle'],par.displayname.text])
+        
+    fd['children'] = []
+    for child in dom.find("children").find_all("dsref"):
+        fd['children'].append([child['handle'], child.displayname.text])
+    return(fd)
+        
 def read_title(dom):
     # fill in data dictionary
     fd = {}
     fd['title'] = dom.displayname.text
     fd['handle'] = get_handle(dom.handle.dsref['handle'])
+    return(fd)
+    
+def read_user(dom):
+    fd = {}
+    fd['handle'] = dom.entityowner.dsref['handle']
+    fd['owner-name'] = dom.entityowner.displayname.text
+    fd['owner-username'] = dom.entityowner.username.text
+    fd['owner-userid'] = dom.entityowner.dsref['handle']
+    fd['parents'] = []
+    for par in dom.find("parents").find_all("dsref"):
+        fd['parents'].append([par['handle'],par.displayname.text])
     return(fd)
     
 def read_ver_data(dom):

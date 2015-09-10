@@ -95,58 +95,93 @@ def modify_dcc_perms(s,handle,perms):
         DCC.set_permissions(s, handle, perms)
 
 def fixPerm(s, handle, actions):
-
     print('\n##############       ENTRY       ##############')
     if 'Document-' in handle:
         fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic', Print = True)
     elif 'Collection-' in handle:
         fd = DCC.prop_get(s, handle, InfoSet = 'CollData', Print = True)
     else:
-        nameData = DCC.prop_get(s, handle, InfoSet = 'Title')
-        print('Not Document or Collection:', handle, ':', nameData['title'])
+        fd = DCC.prop_get(s, handle, InfoSet = 'Title')
+        print('Not Document or Collection:', handle, ':', fd['title'])
         
     perms = DCC.prop_get(s, handle, InfoSet = 'Perms', Print = True)
     
     print('')
     removelist = []
     addlist = []
+    changelist = []
        
+    print('Suggested Changes...')
     for action in actions:
-            if action['Action'] == 'Remove':
-                exclude = action.get('Exclude',[])
-                for perm in perms:
-                    if (not perm['handle'] in exclude) and check_criteria(perm, action):
-                        print('Modify (Remove): ',action['Action'],':',perm['handle'],':',perm['name'],sep='')
-                        removelist.append(perm)
-            if action['Action'] == 'Add':
-                addFlag = True
-                for perm in perms:
-                    if not check_criteria(perm, action):
-                        addFlag = False
-                if addFlag:
-                    pEntry = {}
-                    print('Modify (Add): ',action['Action'],action['Handle'],action['Perms'])
-                    pEntry['handle'] = action['Handle']
-                    grpdata = DCC.prop_get(s, pEntry['handle'], InfoSet = 'Title')
-                    pEntry['name'] = grpdata['title']
-                    if 'Read' in action['Perms']:
-                        pEntry['Read'] = action['Perms']['Read']
-                    if 'Write' in action['Perms']:
-                        pEntry['Write'] = action['Perms']['Write']
-                    if 'Manage' in action['Perms']:
-                        pEntry['Manage'] = action['Perms']['Manage']
-                    addlist.append(pEntry)  
+        exclude = action.get('Exclude',[])
+        if action['Action'] == 'Remove':
+            for perm in perms:
+                if (not perm['handle'] in exclude) and check_criteria(perm, action):
+#                     print('Modify (Remove): ',action['Action'],':',perm['handle'],':',perm['name'],sep='')
+                    print('??? Remove ??? :',end='')
+                    DCC.print_perm(perm,LF=True)
+                    removelist.append(perm)
+        if action['Action'] == 'Change':
+            for perm in perms:
+                if (not perm['handle'] in exclude) and check_criteria(perm, action):
+#                     print('Modify (Change:): ',action['Action'],':',perm['handle'],':',perm['name'],action['Perms'],sep='')
+                    # delete the old permission
+                    newperm = perm.copy()
+                    if 'Read' in perm: del(newperm['Read'])
+                    if 'Write'in perm: del(newperm['Write'])
+                    if 'Manage' in perm: del(newperm['Manage'])
+                    for key,val in action['Perms'].items():
+                        newperm[key] = val
+                    changelist.append(newperm)  
+                    print('??? Change ??? :',end='')
+                    DCC.print_perm(newperm,LF=True)
+       
+        if action['Action'] == 'Add':
+            addFlag = True
+            for perm in perms:
+                if not check_criteria(perm, action):
+                    addFlag = False
+            if addFlag:
+                pEntry = {}
+#                 print('Modify (Add): ',action['Action'],action['Handle'],action['Perms'])
+                pEntry['handle'] = action['Handle']
+                grpdata = DCC.prop_get(s, pEntry['handle'], InfoSet = 'Title')
+                pEntry['name'] = grpdata['title']
+                if 'Read' in action['Perms']:
+                    pEntry['Read'] = action['Perms']['Read']
+                if 'Write' in action['Perms']:
+                    pEntry['Write'] = action['Perms']['Write']
+                if 'Manage' in action['Perms']:
+                    pEntry['Manage'] = action['Perms']['Manage']
+                addlist.append(pEntry) 
+                print('??? Add ??? :',end='')
+                DCC.print_perm(pEntry,LF=True) 
     print('')     
     changeFlag = False
     
+    print('Make Changes?...')
     for perm in removelist:
-        print('Remove?: ',perm['handle'],':',perm['name'],end='')
-        if MyUtil.get_yn('(Y/N)?'):
+        print('Remove?: ',end='')
+        DCC.print_perm(perm) 
+        if MyUtil.get_yn(': (Y/N)?'):
             changeFlag = True
             MyUtil.remove_dict_from_list(perms,'handle',perm['handle'])
+    for newperm in changelist:
+        print('Change?:', end='')
+        DCC.print_perm(newperm) 
+        if MyUtil.get_yn(': (Y/N)?'):
+            changeFlag = True
+            for perm in perms:
+                if perm['handle'] == newperm['handle']:
+                    if 'Read' in perm: del(perm['Read'])
+                    if 'Write'in perm: del(perm['Write'])
+                    if 'Manage' in perm: del(perm['Manage'])
+                    for key,val in newperm.items():
+                        perm[key] = val
     for perm in addlist:
-        print('Add?:', perm, end='')
-        if MyUtil.get_yn('(Y/N)?'):
+        print('Add?:', end='')
+        DCC.print_perm(perm)    
+        if MyUtil.get_yn(': (Y/N)?'):
             changeFlag = True
             perms.append(perm)
     
@@ -263,29 +298,18 @@ def testFixPerm():
 #     Tree.print_tree(s,tree)
 #     flatTree = Tree.flat_tree(tree, 'root', [])    
     
-#     collhandle = 'Collection-10892'
-#     dochandle = 'Document-27819'
-    dochandle = 'Document-8865'
-    collhandle = 'Collection-8279'
+    collhandle = 'Collection-10892'
+    dochandle = 'Document-27819'
+#     dochandle = 'Document-8865'
+#     collhandle = 'Collection-8279'
     
-    actions = [ {'Criteria' : {'HandleContains' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'Group-4'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'Group-536'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-1083'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-21'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-2'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-1087'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-120'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-1165'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleContains' : 'User-383'}, 'Action' : 'Remove'},
-                {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
-                {'Criteria' : {'Absent' : 'Group-103'}, 'Action' : 'Add', 'Handle': 'Group-103', 'Perms' : {'Read':True, 'Write':True}}]
 
     actions = [ {'Criteria' : {'HandlePattern' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandlePattern' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
+                {'Criteria' : {'HandlePattern' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325', 'Group-4'], 'Action' : 'Remove'},
+                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
+                {'Criteria' : {'Read' : False, 'Write' : True, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
+                {'Criteria' : {'Read' : False, 'Write' : True, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Change', 'Perms' : {'Read':True, 'Write':True}},
+                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : True} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
                 {'Criteria' : {'HandleMatches' : 'Group-4'}, 'Action' : 'Remove'},
                 {'Criteria' : {'HandleMatches' : 'Group-536'}, 'Action' : 'Remove'},
                 {'Criteria' : {'HandleMatches' : 'User-1083'}, 'Action' : 'Remove'},
@@ -298,12 +322,11 @@ def testFixPerm():
                 {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
                 {'Criteria' : {'Absent' : 'Group-103'}, 'Action' : 'Add', 'Handle': 'Group-103', 'Perms' : {'Read':True, 'Write':True}}]
 
-
     
 #     for handle in flatTree:
 #         fixPerm(s,handle, actions)
 
-    fixPerm(s,collhandle,actions)
+    fixPerm(s,dochandle,actions)
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
