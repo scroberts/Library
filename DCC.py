@@ -262,7 +262,7 @@ def prop_get(s, handle, **kwargs):
                 'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
                 'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',
                 'Summary' : '<summary/>',
-                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><acl/><getlastmodified/><summary/><parents/><versions/>',
+                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><getlastmodified/><summary/><parents/><versions/>',
                 'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
@@ -358,7 +358,7 @@ def prop_scrape(dom, infoSet, printFlag):
     elif infoSet == 'CollCont':     
         fd = read_coll_cont(dom)
     elif infoSet == 'Perms':
-        fd = read_doc_perms(dom)
+        fd = read_perm(dom)
     elif infoSet == 'Title':
         fd = read_title(dom)
     elif infoSet == 'Group':
@@ -429,8 +429,7 @@ def print_doc_all(fd):
     print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
     print("Author: ", fd['author'], sep="")
     print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
-    print("Last Modified: ", fd['date'])
-    print_perms(fd['permissions'])
+    print("Last Modified: ", fd['date'])#     print_perms(fd['permissions'])
     print("\nLocations...")
     for loc in sorted(fd['locations'], key = lambda x: x[0]):
         print(loc[0],", \"",loc[1],"\"", sep="")
@@ -460,9 +459,10 @@ def print_parents(fd):
 
 def print_perms(permlist):
     print("\nPermissions...")
-    for perm in sorted(permlist, key = lambda x: x["handle"]):
+    for perm in sorted(permlist['perms'], key = lambda x: x["handle"]):
         print_perm(perm)
         print("")    
+    print('Private: ', permlist['private'])
         
 def print_title(fd):
     print("\nHandle: ", fd['handle'])
@@ -552,32 +552,7 @@ def read_doc_data(dom):
     vers = dom.find("versions").find_all("version")
     for ver in vers:
         fd['versions'].append([ver.dsref['handle'],ver.comment.text,ver.videntifier.text.zfill(2),ver.username.text])
-    # pprint.pprint(fd['versions'])
-    # Permissions
-    fd["permissions"] = read_doc_perms(dom)
     return(fd)
-    
-def read_doc_perms(dom):
-    fd = {}
-    # Permissions
-    perms = []
-    for p in dom.find_all("ace"):  
-        try:     
-            pentry = {}
-            pentry["handle"] = p.dsref.get('handle')
-            pentry["name"] = p.displayname.text
-            if p.searchers != None:
-                pentry["Search"] = True
-            if p.readers != None:
-                pentry["Read"] = True
-            if p.writers != None:
-                pentry["Write"] = True 
-            if p.managers != None:
-                pentry["Manage"] = True
-            perms.append(pentry)  
-        except:
-            pass
-    return(perms)
     
 def read_group(dom):
     fd = {}
@@ -595,6 +570,37 @@ def read_group(dom):
     for child in dom.find("children").find_all("dsref"):
         fd['children'].append([child['handle'], child.displayname.text])
     return(fd)
+    
+def read_perm(dom):
+    fd = {}
+    # Permissions
+    perms = {}
+    perms['perms'] = []
+
+    perms['private'] = False
+    try:
+        if dom.private.text == '1':
+            perms['private'] = True
+    except:
+        pass
+    
+    for p in dom.find_all("ace"):  
+        try:     
+            pentry = {}
+            pentry["handle"] = p.dsref.get('handle')
+            pentry["name"] = p.displayname.text
+            if p.searchers != None:
+                pentry["Search"] = True
+            if p.readers != None:
+                pentry["Read"] = True
+            if p.writers != None:
+                pentry["Write"] = True 
+            if p.managers != None:
+                pentry["Manage"] = True
+            perms['perms'].append(pentry)  
+        except:
+            pass
+    return(perms)
         
 def read_title(dom):
     # fill in data dictionary
@@ -707,39 +713,46 @@ def test_props():
     s = login(CF.dcc_url + CF.dcc_login)
 
     collhandle = 'Collection-7337'
-    # collhandle = 'Collection-10259'
+    collhandle = 'Collection-10259'
     collhandle = 'Collection-286'
     collhandle = 'Collection-10259'
-    dochandle = 'Document-2688'
+
     verhandle = 'Version-49414'
+    
+    dochandle = 'Document-2688'
+    dochandle = 'Document-27819'
     
     start = time.time()
 
-    print('Call 1')
+#     print('Call 1 DocAll')
+#     fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
+# 
+#     print('Call 2 DocBasic')
+#     fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
+# 
+#     print('Call 3 CollData')
+#     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+#  
+#     print('Call 4 CollCont Depth = 1')
+#     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
+# 
+#     print('Call 5 CollCont Depth = infinity')
+#     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
+#  
+#     print('Call 6 Parents')
+#     fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
+# 
+#     print('Call 7 Children')
+#     fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
+#     
+#     print('Call 8 CollData, Perms, Children')
+#     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+#     fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
+#     fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
+
+    print('Call 9 DocData, Perms, Children')
     fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
-
-    print('Call 2')
-    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
-
-    print('Call 3')
-    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
- 
-    print('Call 4')
-    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
-
-    print('Call 5')
-    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
- 
-    print('Call 6')
-    fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
-
-    print('Call 7')
-    fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
-    
-    print('Call 8')
-    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
-    fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
-    fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
+    fd['permissions'] = prop_get(s, dochandle, InfoSet = 'Perms', WriteProp = True, Print = True)    
     
     end = time.time()
 
@@ -754,9 +767,9 @@ def test_user_group():
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-#     test_props()
+    test_props()
 #     test_version()
 #     test_change_owner()
-    test_user_group()
+#     test_user_group()
 
 

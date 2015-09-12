@@ -253,10 +253,10 @@ def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
 
             r_dates.append(r_dt)  
             
-            if r_title.find('_DISPOSITION') > -1:
+            if r_title.upper().find('_DISPOSITION') > -1:
                 r_disposition = r_latest   
                 
-            if r_title.find('_ACTION') > -1:
+            if r_title.upper().find('_ACTION') > -1:
                 r_action = r_latest
 
             times += 1
