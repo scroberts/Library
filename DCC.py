@@ -299,7 +299,7 @@ def prop_get(s, handle, **kwargs):
         dom = BeautifulSoup(r.text)
         if retDom:
             return(dom)
-        fd = prop_scrape(dom, infoSet, depth)
+        fd = prop_scrape(dom, infoSet)
         FileSys.file_write_json(fd, fRoot)
 
     if printFlag: 
@@ -334,7 +334,7 @@ def prop_print(infoSet, fd):
     elif infoSet == 'User':
         print_user(fd)
 
-def prop_scrape(dom, infoSet, printFlag):
+def prop_scrape(dom, infoSet):
     if infoSet == 'DocBasic':
         fd = read_doc_basic_data(dom)
     elif infoSet == 'DocDate':
@@ -352,7 +352,6 @@ def prop_scrape(dom, infoSet, printFlag):
         fd = read_doc_data(dom)
     elif infoSet == 'VerAll':
         fd = read_ver_data(dom)   
-        if printFlag: print_ver(fd)
     elif infoSet == 'CollData':
         fd = read_coll_data(dom)
     elif infoSet == 'CollCont':     
@@ -534,7 +533,7 @@ def read_doc_data(dom):
     # fill in file data dictionary
     fd = {}
     fd['title'] = dom.displayname.text
-    fd['handle'] = get_handle(dom.acl['handle'])
+    fd['handle'] = get_handle(dom.href.text)
     fd['tmtnum'] = dom.summary.text
     fd['prefver'] = dom.preferred_version.dsref['handle']
     fd['filename'] = dom.webdav_title.text
