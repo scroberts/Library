@@ -436,7 +436,12 @@ def print_doc_all(fd):
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
-      
+
+def print_parents(fd):   
+    print("\nParents...")
+    for p in fd:
+        print("  [",p[0],"], \"", p[1], "\"", sep = "") 
+              
 def print_perm(perm, **kwargs):
     print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
     if "Search" in perm.keys():
@@ -450,11 +455,6 @@ def print_perm(perm, **kwargs):
     print(", \"",perm['name'],"\"",sep="",end="")
     if kwargs.get('LF',False):
         print('')
- 
-def print_parents(fd):   
-    print("\nParents...")
-    for p in fd:
-        print("  [",p[0],"], \"", p[1], "\"", sep = "") 
 
 def print_perms(permlist):
     print("\nPermissions...")
@@ -633,7 +633,7 @@ def read_ver_data(dom):
     fd['date'] = dom.getlastmodified.text
     return(fd)
     
-def set_permissions(s,handle,fd):
+def set_permissions(s,handle,permdata):
     # fd follows the permissions dictionary format
     
     url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
@@ -641,7 +641,7 @@ def set_permissions(s,handle,fd):
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><acl handle="''' 
     xml += handle
     xml += '''">'''
-    for entry in fd:
+    for entry in permdata['perms']:
         read = entry.get('Read','False')
         write = entry.get('Write','False')
         manage = entry.get('Manage','False')
@@ -659,7 +659,12 @@ def set_permissions(s,handle,fd):
             xml += '''</grant></ace>'''   
         if 'File' in handle or 'Document' in handle:
             xml += '''</grant><cascade/></ace>'''   
-    xml += '''</acl></prop></set></propertyupdate>'''
+    xml += '''</acl>'''
+    if permdata['private'] == True:
+        xml += '''<private>1</private>'''
+    else:
+        xml += '''<private></private>'''
+    xml += '''</prop></set></propertyupdate>'''
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
 
