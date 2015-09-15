@@ -31,6 +31,7 @@ def dic_handle_not_in(hdl): return({'NOT' : dic_handle_in(hdl)})
 grp_all_users = 'Group-4'
 grp_Isbrucker = 'Group-536'
 grp_SE_readership = 'Group-325'
+grp_M1CS_obs = 'Group-641'
 
 usr_sr_admin = 'User-1083'
 usr_holly = 'User-21'
@@ -74,8 +75,10 @@ handle_sr_admin = dic_handle_eq('usr_sr_admin')
 
 # Set A
 obj_sel = {}
+perm_sel = {}
 obj_criteria_dict = {}
 obj_actions_dict = {}
+
 
 # Perms:
 # A1: Remove any read_only users (they should be in groups)
@@ -114,18 +117,29 @@ setA =  {'ObjSel' : {'Criteria' : obj_sel},
                      {'Criteria' : perm_criteria_A5, 'Action' : perm_actions_A5}]}
                      
 
+SE_read_OR_M1CS_obs = {'OR' : [dic_handle_eq(grp_SE_readership), dic_handle_eq(grp_M1CS_obs)]}
+
 # SetB Remove Dumas user read only
 # B1: Remove any read_only users (they should be in groups)
 perm_criteria_B1 = {'AND' : [user_read_only, dic_handle_eq(usr_christophe)]}
 perm_actions_B1 = REMOVE
 setB =  {'ObjSel' : {'Criteria' : obj_sel},
          'ObjAct' : {'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+         'PermSel' : {'Criteria' : SE_read_OR_M1CS_obs },
          'PermAct' : [{'Criteria' : perm_criteria_B1, 'Action' : perm_actions_B1}]}
  
 
 
-# print(setA)
+# print(setB)
+
+# try:
+#     perm_sel = setB['PermSel']['Criteria']
+# except:
+#     print('PerSel is not defined')
+#         
+# print('PerSel is defined', perm_sel)
 # 
+# # 
 # print(setA['PermAct'])
 # 
 # for perm_act in setA['PermAct']:

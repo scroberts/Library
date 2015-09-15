@@ -633,6 +633,20 @@ def read_ver_data(dom):
     fd['date'] = dom.getlastmodified.text
     return(fd)
     
+def set_private(s, handle, private_flag):
+    # fd follows the permissions dictionary format
+    
+    url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
+    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
+    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop>'''
+    if private_flag == True:
+        xml += '''<private>1</private>'''
+    else:
+        xml += '''<private></private>'''
+    xml += '''</prop></set></propertyupdate>'''
+    r = s.post(url,data=xml,headers=headers)
+    print("Permission Change Status Code:", r.status_code)
+
 def set_permissions(s,handle,permdata):
     # fd follows the permissions dictionary format
     
@@ -660,10 +674,10 @@ def set_permissions(s,handle,permdata):
         if 'File' in handle or 'Document' in handle:
             xml += '''</grant><cascade/></ace>'''   
     xml += '''</acl>'''
-    if permdata['private'] == True:
-        xml += '''<private>1</private>'''
-    else:
-        xml += '''<private></private>'''
+#     if permdata['private'] == True:
+#         xml += '''<private>1</private>'''
+#     else:
+#         xml += '''<private></private>'''
     xml += '''</prop></set></propertyupdate>'''
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
