@@ -8,6 +8,23 @@ import re
 def strip_xml(mystring):
     return(re.sub('<[^>]*>', '', mystring))
 
+def get_all_none_indiv(question):
+    # Expects one of the following:
+    #   'A' = 'All'
+    #   'N' = 'None'
+    #   'I' = 'Individual Y/N'
+    #   Returns 'All', 'None' or 'Individual'
+    ans = ''
+    while (ans.upper() != ('A' or 'N' or 'I')):
+        print(question,end="")
+        ans = input()
+        if ans.upper() == 'A':
+            return 'All'
+        elif ans.upper() == 'N':
+            return 'None'
+        elif ans.upper() == 'I':
+            return 'Individual'
+    
 def get_yn(question):
     ans = ''
     while (ans.upper() != 'Y') and (ans.upper() != 'N'):

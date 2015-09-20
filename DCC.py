@@ -250,20 +250,21 @@ def prop_get(s, handle, **kwargs):
     
     url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
+    infoDic = { 'Children' : '<children/>',
+                'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',    
+                'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
+                'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
+                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><getlastmodified/><summary/><parents/><versions/>',
                 'Group': '<entityowner/><handle/><parents/><children/>',
-                'User': '<entityowner/><handle/><parents/>',
+                'Locations': '<parents/>',
+                'Parents': '<parents/>',
+                'Perms': '<private/><acl/>',
+                'Summary' : '<summary/>',
                 'Title': '<handle/>',
                 'User': '<entityowner/><handle/><parents/>',
-                'Parents': '<parents/>',
-                'Children' : '<children/>',
-                'Perms': '<private/><acl/>',
-                'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
-                'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',
-                'Summary' : '<summary/>',
-                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><getlastmodified/><summary/><parents/><versions/>',
-                'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
+                'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>',
+                'Versions' : '<versions/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     if debug: print('infoSet:',infoSet)
@@ -436,6 +437,17 @@ def print_doc_all(fd):
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
+    
+def print_locations(fd):
+    print("\nLocations...")
+    for loc in sorted(fd['locations'], key = lambda x: x[0]):
+        print(loc[0],", \"",loc[1],"\"", sep="")
+
+def print_versions(fd):
+    print("\nVersions...")
+    for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
+        print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
+
 
 def print_parents(fd):   
     print("\nParents...")
@@ -535,7 +547,7 @@ def read_doc_data(dom):
     fd['title'] = dom.displayname.text
     fd['handle'] = get_handle(dom.href.text)
     fd['tmtnum'] = dom.summary.text
-    fd['prefver'] = dom.preferred_version.dsref['handle']
+
     fd['filename'] = dom.webdav_title.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
@@ -543,14 +555,35 @@ def read_doc_data(dom):
     fd['author'] = dom.author.text
     fd['keywords'] = dom.keywords.text
     fd['date'] = dom.getlastmodified.text
+    
     fd['locations'] = []
-    fd['versions'] = []
     colls = dom.find("parents").find_all("dsref")
     for coll in colls:
         fd['locations'].append([coll['handle'],coll.displayname.text])
+        
+    fd['versions'] = []        
+    fd['prefver'] = dom.preferred_version.dsref['handle']
     vers = dom.find("versions").find_all("version")
     for ver in vers:
         fd['versions'].append([ver.dsref['handle'],ver.comment.text,ver.videntifier.text.zfill(2),ver.username.text])
+        
+    return(fd)
+    
+def read_versions(dom):
+    fd = {}
+    fd['versions'] = []        
+    fd['prefver'] = dom.preferred_version.dsref['handle']
+    vers = dom.find("versions").find_all("version")
+    for ver in vers:
+        fd['versions'].append([ver.dsref['handle'],ver.comment.text,ver.videntifier.text.zfill(2),ver.username.text])
+    return(fd)
+
+def read_locations(dom):
+    fd = {}
+    fd['locations'] = []
+    colls = dom.find("parents").find_all("dsref")
+    for coll in colls:
+        fd['locations'].append([coll['handle'],coll.displayname.text])
     return(fd)
     
 def read_group(dom):
@@ -650,6 +683,7 @@ def set_private(s, handle, private_flag):
 def set_permissions(s,handle,permdata):
     # fd follows the permissions dictionary format
     
+    if debug: print('\n\nPermdata:', permdata, '\n\n')
     url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><acl handle="''' 
@@ -679,6 +713,7 @@ def set_permissions(s,handle,permdata):
 #     else:
 #         xml += '''<private></private>'''
     xml += '''</prop></set></propertyupdate>'''
+    if debug: print(xml)
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
 

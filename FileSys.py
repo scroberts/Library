@@ -34,6 +34,14 @@ def check_date_okay(dccDate, osSecs):
     if debug: print('Cache out of date')
     return(False)
     
+def file_check_json(s, fname, path = CF.dccfilepath):
+    if not '.json' in fname:
+        fname = fname + '.json' 
+    if not os.path.isfile(path+fname):
+        return(False)
+    if debug: print('File Exists')
+    return(True)
+
 def check_cache_okay(s, handle, fname, path = CF.dccfilepath):
     if not '.json' in fname:
         fname = fname + '.json' 
@@ -56,6 +64,7 @@ def check_cache_fd_json(s, handle, infoSet, fname, path = CF.dccfilepath):
     # Check if validity can be determined
     if 'Normal' in cacheMode:
         if infoSet in ['Children', 'CollCont', 'DocDate', 'Parents', 'Perms']:
+            if debug: print('check_cache_fd_json: Returning False for InfoSet = ',infoSet)
             return([False, []])
                 
     if not check_cache_okay(s, handle, fname):

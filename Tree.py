@@ -5,6 +5,18 @@
 # my modules
 import DCC
 import Config as CF
+import FileSys
+import MyUtil
+
+def return_tree(s, target, rootfilename):
+    if FileSys.file_check_json(s, rootfilename):
+        if MyUtil.get_yn('File already exists.  [Load from disk = Y, re-create = N] (Y/N)?'):
+            tr = FileSys.file_read_json(rootfilename)
+            return(tr)
+    tr = get_tree(s,target)
+    print_tree(s, tr)
+    FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
+    return(tr)
 
 def flat_tree(tree, key, list):
     branch = tree[key]
@@ -15,15 +27,14 @@ def flat_tree(tree, key, list):
     for col in branch['collections']:
         list.append(col)
         flat_tree(tree, col, list)
-
     return(list)   
-    
 
 def iter_print_tree(s, tree, key, indent):
     branch = tree[key]
     for doc in branch['documents']:
-        nameData = DCC.prop_get(s, doc, InfoSet = 'Title')
-        print(indent+doc, ':', nameData['title']) 
+        nameData = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
+        print(indent+doc, ':', nameData['title'], ':', nameData['tmtnum']) 
+        print(indent+'    ','https://docushare.tmt.org/docushare/dsweb/ServicesLib/',doc,'/Permissions',sep='')
     for other in branch['others']:
         nameData = DCC.prop_get(s, other, InfoSet = 'Title')
         print(indent+other, ':', nameData['title'])        
@@ -31,6 +42,9 @@ def iter_print_tree(s, tree, key, indent):
         nameData = DCC.prop_get(s, col, InfoSet = 'Title')
         print(indent+col, ':', nameData['title'])   
         iter_print_tree(s, tree, col, indent+'    ')
+        
+def print_tree(s,tree):
+    iter_print_tree(s, tree, 'root', '')
 
 def build_tree(s, keyname, target, tree, **kwargs):
     # kwargs options:
@@ -67,9 +81,6 @@ def build_tree(s, keyname, target, tree, **kwargs):
         if not col in excludeList:
             tree = build_tree(s, col, col, tree, **kwargs)
     return(tree)
-  
-def print_tree(s,tree):
-    iter_print_tree(s, tree, 'root', '')
 
 def get_tree(s, collhandle, **kwargs):
     return(build_tree(s, collhandle, collhandle, build_root(collhandle), **kwargs))
@@ -103,6 +114,12 @@ def test_tree():
     
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_tree()
+#     test_tree()
+    # Login to DCC
+    s = DCC.login(CF.dcc_url + CF.dcc_login) 
+
+    tr = return_tree(s, 'Collection-1762', 'Sys Eng Publications')
+    print_tree(s,tr)
+
 
 
