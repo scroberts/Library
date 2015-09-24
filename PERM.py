@@ -65,7 +65,7 @@ def make_perm_changes(s, handle, permdata, removelist, changelist, addlist, **kw
                     if 'Manage' in perm: del(perm['Manage'])
                     for key,val in chperm.items():
                         perm[key] = val
-                        
+                              
     for addperm in addlist:
         print('Add?:', end='')
         DCC.print_perm(addperm)    
@@ -114,7 +114,6 @@ def print_perm_changes(removelist, changelist, addlist):
         print('??? Add ??? :',end='')
         DCC.print_perm(perm,LF=True)
     print()
-        
 
 def id_perm_changes(s, handle, fd, permdata, set):
     removelist = []
@@ -236,6 +235,7 @@ def printCheckPerms(perm,plist):
     if 'M' in plist and manage_okay == False:
         perms_okay = False    
     return perms_okay
+    
 def checkPerms(target, permissions):
     # Login to DCC
     s = DCC.login(CF.dcc_url + CF.dcc_login)
@@ -298,83 +298,6 @@ def checkPerms(target, permissions):
             
     return([passList,failList])
             
-def testPerm():
-    # Define a list data structure of users or groups in sets that are
-    # acceptable if they have read permission to the collections and files
-    # The with the following logic: 
-    #
-    #   All contents of sets must be acceptable in an AND case (i.e. every
-    #       member of a set must have read access to be acceptable) 
-    #
-    #   Permissions will be acceptable if any set is acceptable in an OR
-    #     	sense (i.e. if one set meets the criteria then the the
-    #     	permissions are considered okay)
-
-    # Define the top level collection or document to check
-    target = 'Collection-10071'
-#     target = 'Document-21380'
-#     target = 'Collection-1318'
-    
-    # Define users or groups that will be checked for permissions
-    sys_eng_read = 'Group-325'
-    se_group = 'Group-103'
-    content_admin = 'Group-2'
-    sr_user = 'User-50'
-    tc_user = 'User-1165'
-    
-    # Define the permissions
-    permissions = [{tc_user : 'RWM'}]
-#     permissions = [{sys_eng_read : 'R'},{se_group : 'RW', content_admin : 'RWM'}, {sr_user : 'RWM'}]
-
-    # Call the checkPerms function
-    [passList,failList] = checkPerms(target, permissions)
-    
-    print('\n\n')
-    print('List of docs that pass:', passList)
-    print('List of docs that fail:', failList)
-            
-def testFixPerm():
-    # Login to DCC
-    s = DCC.login(CF.dcc_url + CF.dcc_login)
-     
-    collhandle = 'Collection-286'
-#     exclude = ['Collection-7337','Document-21244', 'Document-26018']
-    exclude = []
-
-    print('excluding from Tree:',exclude)
-    tree = Tree.get_tree(s, collhandle, Exclude = exclude)
-    Tree.print_tree(s,tree)
-    flatTree = Tree.flat_tree(tree, 'root', [])    
-    
-    collhandle = 'Collection-10892'
-    dochandle = 'Document-27819'
-#     dochandle = 'Document-8865'
-#     collhandle = 'Collection-8279'
-    
-
-    actions = [ {'Criteria' : {'HandlePattern' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandlePattern' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325', 'Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : True, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : True, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Change', 'Perms' : {'Read':True, 'Write':True}},
-                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : True} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'Group-4'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'Group-536'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-1083'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-21'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-2'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-1087'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-120'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-1165'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-383'}, 'Action' : 'Remove'},
-                {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
-                {'Criteria' : {'Absent' : 'Group-103'}, 'Action' : 'Add', 'Handle': 'Group-103', 'Perms' : {'Read':True, 'Write':True}}]
-
-    
-    for handle in flatTree:
-        fixPerm(s,handle, actions)
-
-#     fixPerm(s,dochandle,actions)
 
 def test_fix_set():
     # Login to DCC
