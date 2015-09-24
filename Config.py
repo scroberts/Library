@@ -16,5 +16,5 @@ docs_url_main = docs_url_base + 'index.html'
 docmod_url_list_file = 'document_module_url_list.json'
 docmod_dict_file = 'document_module.json'
 
-tracetreefilepath = r'/Users/sroberts/Box Sync/Python/TraceTree Files/'
+tracetreefilepath = r'/Users/sroberts/Dropbox/TMT/Python/TraceTree Files/'
 
