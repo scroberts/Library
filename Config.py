@@ -7,7 +7,7 @@ dcc_url = "https://docushare.tmt.org/docushare"
 dcc_login = "/dsweb/Login"
 dcc_prop = "/dsweb/Services/"
 
-dccfilepath = r'/Users/sroberts/Box Sync/Python/DCC Files/'
+dccfilepath = r'/Users/sroberts/Dropbox/TMT/Python/DCC Files/'
 
 # DocMod Module Definitions
 docs_url_base = 'https://trace-tree.tmt.org/TMT_Requirements/Documents/Documents/'
