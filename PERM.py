@@ -14,6 +14,13 @@ import Match
 
 debug = False
 
+def get_group_handles(s,grp):
+    fd = DCC.prop_get(s, grp, InfoSet = 'Group', Print = True, WriteProp = True)
+    chandles = []
+    for c in fd['children']:
+        chandles.append(c[0])
+    return(chandles)
+
 def check_perms(s, set, handle, treename, **kwargs):
     ask_flag = kwargs.get('Ask', True)
     if not ask_flag:
@@ -93,12 +100,22 @@ def check_fd_sel(fd, set):
         return(True)
 
 def check_perm_sel(permdata, set):
+    # PermSel Criteria is a list of checks against permissions.  If the complete list passes
+    # then the PermAct actions will be undertaken.
     try:
-        perm_sel = set['PermSel']['Criteria']
-        for perm in permdata['perms']:
-            if Match.parse(perm_sel, perm):
-                return(True)
-        return(False)
+        perm_sels = set['PermSel']['Criteria']
+        for perm_sel in perm_sels:
+            if debug: print('check_perm_sel:',perm_sel)
+            for perm in permdata['perms']:
+                match_flag = False
+                if Match.parse(perm_sel, perm):
+                    match_flag = True
+                    break
+            if match_flag == False:
+                if debug: print('check_perm_sel: returning False')
+                return(False)
+        if debug: print('check_perm_sel: returning True')
+        return(True)
     except:
         if debug: print('PermSel is not defined')
         return(True)

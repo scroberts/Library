@@ -716,6 +716,8 @@ def set_permissions(s,handle,permdata):
     if debug: print(xml)
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
+    # Now write new permissions back to cache
+    fd = prop_get(s, handle, InfoSet = 'Perms')
 
 
 def test_change_owner():
@@ -815,14 +817,19 @@ def test_user_group():
     # Login to DCC
     s = login(CF.dcc_url + CF.dcc_login)
 
-    grp = 'Group-325'
+    grp = 'Group-666'
     fd = prop_get(s, grp, InfoSet = 'Group', Print = True, WriteProp = True)
+    chandles = []
+    for c in fd['children']:
+        chandles.append(c[0])
+    print(chandles)
+    
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_props()
+#     test_props()
 #     test_version()
 #     test_change_owner()
-#     test_user_group()
+    test_user_group()
 
 
