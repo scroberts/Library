@@ -777,31 +777,31 @@ def test_props():
     
     start = time.time()
 
-#     print('Call 1 DocAll')
-#     fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
-# 
-#     print('Call 2 DocBasic')
-#     fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
-# 
-#     print('Call 3 CollData')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
-#  
-#     print('Call 4 CollCont Depth = 1')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
-# 
-#     print('Call 5 CollCont Depth = infinity')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
-#  
-#     print('Call 6 Parents')
-#     fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
-# 
-#     print('Call 7 Children')
-#     fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
-#     
-#     print('Call 8 CollData, Perms, Children')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
-#     fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
-#     fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
+    print('Call 1 DocAll')
+    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
+
+    print('Call 2 DocBasic')
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
+
+    print('Call 3 CollData')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+ 
+    print('Call 4 CollCont Depth = 1')
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
+
+    print('Call 5 CollCont Depth = infinity')
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
+ 
+    print('Call 6 Parents')
+    fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
+
+    print('Call 7 Children')
+    fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
+    
+    print('Call 8 CollData, Perms, Children')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+    fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
+    fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
 
     print('Call 9 DocData, Perms, Children')
     fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)

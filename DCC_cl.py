@@ -14,6 +14,14 @@ def copy_object(s):
     col = input("Enter Collection Handle to Copy To: ")
     DCC.add_docs_2_collections(s,[obj],[col])
     return
+    
+def move_object(s):
+    obj = input("Enter Object Handle: ")
+    source = input("Enter Collection Handle to Move From: ")
+    dest = input("Enter Collection Handle to Move To: ")
+
+    DCC.dcc_move(s, obj, source, dest)
+    return    
 
 def main():
     # Login to DCC
@@ -26,6 +34,8 @@ def main():
             break
         if com.upper() == 'COPY':
             copy_object(s)
+        if com.upper() == 'MOVE':
+            move_object(s)
         
 if __name__ == '__main__':
     print("Running module test code for",__file__)

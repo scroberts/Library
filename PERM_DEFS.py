@@ -21,59 +21,24 @@ debug = False
 #             'perm' : [ list of dicts of {'perm_crit' : parse_dict , 'perm_act' : perm_act_dict}, {...} ]  
 
 def def_perm(k,v,m): return({'InDict' : {'key' : k, 'val' : v, 'match' : m}})
-
 def dic_handle_eq(hdl): return(def_perm('handle',hdl,'eq'))
 def dic_handle_in(hdl): return(def_perm('handle',hdl,'in'))
 def dic_handle_not_eq(hdl): return({'NOT' : dic_handle_eq(hdl)})
 def dic_handle_not_in(hdl): return({'NOT' : dic_handle_in(hdl)})
 def make_permact(criteria, action): return({'Criteria' : criteria, 'Action' : action})
+# Remove Individual users
+def remove_user(user): return(make_permact(dic_handle_eq(user), REMOVE))
 
-grp_all_users = 'Group-4'
-grp_all_noEAR = 'Group-33'
-grp_Isbrucker = 'Group-536'
-grp_SE_readership = 'Group-325'
-grp_M1CS_obs = 'Group-641'
-grp_STR_managers = 'Group-655'
-
-usr_sr_admin = 'User-1083'
-usr_holly = 'User-21'
-usr_site_admin = 'User-2'
-usr_lindquist = 'User-120'
-usr_peter_gray = 'User-383'
-usr_christophe = 'User-1167'
-usr_matthias = 'User-18'
-usr_crampton = 'User-38'
-usr_lianqi = 'User-407'
-
-# IRIS Subsystem Team Members
-usr_wright = 'User-753'
-usr_larkin = 'User-218'
-usr_moore = 'User-458'
-usr_ryugi = 'User-572'
-usr_lu = 'User-556'
-
-# structures group
-usr_szeto = 'User-138'
-usr_chylek = 'User-1165'
-usr_amir = 'User-573'
-usr_kyle = 'User-1087'
+REMOVE = {'Action' : 'Remove'}
+CHANGE_R = {'Action' : 'Change', 'Perms' : {'Read':True}}
+CHANGE_RW = {'Action' : 'Change', 'Perms' : {'Read':True, 'Write':True}}
+CHANGE_RWM = {'Action' : 'Change', 'Perms' : {'Read':True, 'Write':True, 'Manage':True}}
 
 user_handle = dic_handle_in('User-')
 group_handle = dic_handle_in('Group-')
-
 doc_handle = dic_handle_in('Document-')
 col_handle = dic_handle_in('Collection-')
 docORcol = {'OR' : [doc_handle, col_handle]}
-
-SE_doc = def_perm('tmtnum', '.SEN.', 'in')
-STR_doc = def_perm('tmtnum', '.STR.', 'in')
-CTR_doc = def_perm('tmtnum', '.CTR.', 'in')
-OPT_doc = def_perm('tmtnum', '.OPT.', 'in')
-TEL_doc = def_perm('tmtnum', '.TEL.', 'in')
-
-INS_doc = def_perm('tmtnum', '.INS.', 'in')
-
-TELDEPT_doc = {'OR' : [STR_doc, CTR_doc, OPT_doc, TEL_doc]}
 
 read_true = def_perm('Read', True, 'eq')
 write_true = def_perm('Write', True, 'eq')
@@ -90,15 +55,95 @@ perm_write_only = {'AND' : [read_false, write_true, manage_false]}
 perm_W_or_M_no_R = {'AND' : [read_false, {'OR' : [write_true, manage_true]}]}
 user_manage_false = {'AND' : [user_handle, manage_false]}
 
+
+SE_doc = def_perm('tmtnum', '.SEN.', 'in')
+STR_doc = def_perm('tmtnum', '.STR.', 'in')
+CTR_doc = def_perm('tmtnum', '.CTR.', 'in')
+OPT_doc = def_perm('tmtnum', '.OPT.', 'in')
+TEL_doc = def_perm('tmtnum', '.TEL.', 'in')
+
+# Groups
+grp_all_users = 'Group-4'
+grp_all_noEAR = 'Group-33'
+grp_Isbrucker = 'Group-536'
+grp_SE_readership = 'Group-325'
+grp_M1CS_obs = 'Group-641'
+grp_STR_managers = 'Group-655'
+grp_IRIS_team = 'Group-54'
+
+usr_sr_admin = 'User-1083'
+usr_holly = 'User-21'
+usr_site_admin = 'User-2'
+usr_lindquist = 'User-120'
+usr_peter_gray = 'User-383'
+usr_christophe = 'User-1167'
+usr_matthias = 'User-18'
+usr_crampton = 'User-38'
+usr_lianqi = 'User-407'
+
+# TMT Instrumentation Members
+usr_simard = 'User-241'
+usr_ellerbroek = 'User-29'
+
+# IRIS Subsystem Team Members
+usr_wright = 'User-753'
+usr_larkin = 'User-218'
+usr_moore = 'User-458'
+usr_ryugi = 'User-572'
+usr_lu = 'User-556'
+
+# structures group
+usr_chylek = 'User-1165'
+usr_amir = 'User-573'
+usr_kyle = 'User-1087'
+
+# inactive users
+usr_szeto = 'User-138'
+usr_taylor = 'User-53'
+usr_hubin = 'User-300'
+usr_erickson = 'User-135'
+usr_britton = 'User-119'
+usr_augusto = 'User-213'
+usr_ford = 'User-123'
+usr_miska = 'User-305'
+
+
+REMOVE_INACTIVE =   [remove_user(usr_szeto), 
+                    remove_user(usr_taylor), 
+                    remove_user(usr_hubin),
+                    remove_user(usr_erickson),
+                    remove_user(usr_britton),
+                    remove_user(usr_augusto),
+                    remove_user(usr_miska),
+                    remove_user(usr_ford)]
+
+# EAR Groups
+grp_EAR_JPN_IRIS = 'Group-453'
+grp_EAR_CHINA_SAC = 'Group-122'
+grp_EAR_IN_SAC = 'Group-123'
+grp_EAR_JP_SAC = 'Group-124'
+grp_EAR_IN_BOARD = 'Group-120'
+grp_EAR_JP_BOARD = 'Group-121'
+
+grp_EAR_perm = {'OR' :  [dic_handle_eq(grp_EAR_JPN_IRIS),
+                    dic_handle_eq(grp_EAR_CHINA_SAC),
+                    dic_handle_eq(grp_EAR_IN_SAC),
+                    dic_handle_eq(grp_EAR_JP_SAC),
+                    dic_handle_eq(grp_EAR_IN_BOARD),
+                    dic_handle_eq(grp_EAR_JP_BOARD)]}
+                    
+
+
+INS_doc = def_perm('tmtnum', '.INS.', 'in')
+
+TELDEPT_doc = {'OR' : [STR_doc, CTR_doc, OPT_doc, TEL_doc]}
+
 no_se_readership = {'NOT' : dic_handle_eq( grp_SE_readership )}
+no_IRIS_team = {'NOT' : dic_handle_eq( grp_IRIS_team )}
 no_str_managers = {'NOT' : dic_handle_eq( grp_STR_managers )}
-se_readership_noRead_or_WM = {'AND' : [dic_handle_eq(grp_SE_readership), {'OR' : [read_false, write_true, manage_true]}]}
 
 exclude_grp_se_readership = dic_handle_not_in(grp_SE_readership)
 exclude_grp_all_users = dic_handle_not_in(grp_all_users)
-
-REMOVE = {'Action' : 'Remove'}
-CHANGE_R = perm_actions_A5 = {'Action' : 'Change', 'Perms' : {'Read':True}}
 
 add_R_grp_se_readership = {'Action' : 'Add', 'Handle' : grp_SE_readership, 'Perms' : {'Read' : True}}
 add_RWM_grp_str_managers = {'Action' : 'Add', 'Handle' : grp_STR_managers, 'Perms' : {'Read' : True, 'Write' : True, 'Manage' : True}}
@@ -118,11 +163,13 @@ PERMACT_REMOVE_ro_users = make_permact(user_read_only, REMOVE)
 # Remove read_only groups (except SE readership all)
 PERMACT_REMOVE_ro_groups_except_se_reader = make_permact({'AND' : [group_read_only, no_se_readership]}, REMOVE)
 
+PERMACT_REMOVE_ro_groups_except_IRIS_SEread = make_permact({'AND' : [group_read_only, no_se_readership, no_IRIS_team]}, REMOVE)
+
 # Remove group or user with no Read, but Write and/or Manage
 PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R = make_permact(perm_W_or_M_no_R, REMOVE)
 
 # Change permissions to add Read in cases where there is Write Only
-PERMACT_CHANGE_W_to_RW = make_permact(perm_write_only, {'Action' : 'Change', 'Perms' : {'Read':True, 'Write':True}})
+PERMACT_CHANGE_W_to_RW = make_permact(perm_write_only, CHANGE_RW)
 
 # Add SE readership all if not already there
 PERMACT_ADD_se_readership = make_permact(no_se_readership, add_R_grp_se_readership)
@@ -131,10 +178,8 @@ PERMACT_ADD_se_readership = make_permact(no_se_readership, add_R_grp_se_readersh
 PERMACT_ADD_str_managers = make_permact(no_str_managers, add_RWM_grp_str_managers)
 
 # Change SE readership no read or write/manage to read only
+se_readership_noRead_or_WM = {'AND' : [dic_handle_eq(grp_SE_readership), {'OR' : [read_false, write_true, manage_true]}]}
 PERMACT_CHANGE_se_readership_RO = make_permact(se_readership_noRead_or_WM, CHANGE_R)
-
-# Remove Individual users
-def remove_user(user): return(make_permact(dic_handle_eq(user), REMOVE))
 
 PERMACT_REMOVE_dumas_ro = make_permact({'AND' : [user_read_only, dic_handle_eq(usr_christophe)]}, REMOVE)
 PERMACT_REMOVE_mathias_manage_false = make_permact({'AND' : [manage_false, dic_handle_eq(usr_matthias)]}, REMOVE)
@@ -180,10 +225,25 @@ SET_IRIS_REMOVE_MATTHIAS_MANAGE_FALSE = {
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermAct'   : [ PERMACT_REMOVE_mathias_manage_false ]}                   
 
+
+#         'ObjSel'    : { 'Criteria' : {'AND': [doc_handle, {'NOT' : INS_doc}]}},
+
+
 SET_IRIS_REMOVE_ISBRUCKER = {
-        'ObjSel'    : { 'Criteria' : {'AND': [doc_handle, {'NOT' : INS_doc}]}},
+        'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermAct'   : [remove_user(grp_Isbrucker)]} 
+
+
+Astrometry = {'OR' : [def_perm('title','astrometry','in'), def_perm('title','Astrometry','in')]}
+grp_IRIS_READ = {'AND' : [dic_handle_eq(grp_IRIS_team), read_true]}
+
+SET_IRIS_REMOVE_MATTHIAS = {
+        'ObjSel'    : { 'Criteria' : {'AND' : [docORcol, Astrometry]}},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermSel'   : {'Criteria' : grp_IRIS_READ},
+        'PermAct'   : [remove_user(usr_matthias)]}
+
 
 SE_read_OR_M1CS_obs = {'OR' : [dic_handle_eq(grp_SE_readership), dic_handle_eq(grp_M1CS_obs)]}
 
@@ -192,7 +252,7 @@ SET_M1CS_PDR = {
         'ObjAct'    : {'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermSel'   : {'Criteria' : SE_read_OR_M1CS_obs},
         'PermAct'   : [PERMACT_REMOVE_dumas_ro,
-                       PERMACT_REMOVE_szeto]}
+                       remove_user(usr_szeto)]}
                        
 # For STR group documents, add group 'structure managers'.
 # Remove members of structure managers group from individual permissions.
@@ -216,3 +276,30 @@ SET_REMOVE_STR_MANAGERS = {
                         remove_user(usr_amir),
                         remove_user(usr_kyle),                        
                         ]}
+
+grp_noEAR_READ = {'AND' : [dic_handle_eq(grp_all_noEAR), read_true]}
+ 
+                        
+# Change IRIS Team read only or RWM to RW
+IRIS_team_NotRW = {'AND' : [dic_handle_eq(grp_IRIS_team), {'OR' : [read_false, write_false, manage_true]}]}
+PERMACT_CHANGE_IRIS_team = make_permact(IRIS_team_NotRW, CHANGE_RW)
+
+SET_REPLACE_IRIS_EAR_WITH_ALL = {
+        'ObjSel'    : {'Criteria' : docORcol},
+        'ObjAct'    : {'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermSel'   : {'Criteria' : grp_EAR_perm},
+        'PermAct'   : [ PERMACT_CHANGE_IRIS_team,
+                        PERMACT_ADD_se_readership,
+                        PERMACT_CHANGE_se_readership_RO,
+                        PERMACT_REMOVE_ro_users,
+                        PERMACT_REMOVE_ro_groups_except_IRIS_SEread,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        remove_user(grp_all_noEAR),
+                        remove_user(usr_szeto), 
+                        remove_user(usr_taylor), 
+                        remove_user(usr_hubin),
+                        remove_user(usr_erickson),
+                        remove_user(usr_britton),
+                        remove_user(usr_augusto),
+                        remove_user(usr_miska),
+                        remove_user(usr_ford)]}
