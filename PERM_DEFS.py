@@ -20,6 +20,15 @@ debug = False
 #             'obj' : [ list of dicts of {'obj_crit' : parse_dict, 'obj_act' : obj_act_dict}, {...} ]
 #             'perm' : [ list of dicts of {'perm_crit' : parse_dict , 'perm_act' : perm_act_dict}, {...} ]  
 
+PERM_R = {'Read':True}
+PERM_RW = {'Read':True, 'Write':True}
+PERM_RWM = {'Read':True, 'Write':True, 'Manage':True}
+
+REMOVE = {'Action' : 'Remove'}
+CHANGE_R = {'Action' : 'Change', 'Perms' : PERM_R}
+CHANGE_RW = {'Action' : 'Change', 'Perms' : PERM_RW}
+CHANGE_RWM = {'Action' : 'Change', 'Perms' : PERM_RWM}
+
 def def_perm(k,v,m): return({'InDict' : {'key' : k, 'val' : v, 'match' : m}})
 def dic_handle_eq(hdl): return(def_perm('handle',hdl,'eq'))
 def dic_handle_in(hdl): return(def_perm('handle',hdl,'in'))
@@ -32,15 +41,7 @@ def remove_user(user): return(make_permact(dic_handle_eq(user), REMOVE))
 def add_user(user,perms): return({  'Action': {'Action' : 'Add', 'Handle' : user, 'Perms' : perms},
                                     'Criteria': {'NOT' : dic_handle_eq(user)}})
 def check_user_perms(user, perms): return({'AND' : [dic_handle_eq(user), perms]})
-
-PERM_R = {'Read':True}
-PERM_RW = {'Read':True, 'Write':True}
-PERM_RWM = {'Read':True, 'Write':True, 'Manage':True}
-
-REMOVE = {'Action' : 'Remove'}
-CHANGE_R = {'Action' : 'Change', 'Perms' : PERM_R}
-CHANGE_RW = {'Action' : 'Change', 'Perms' : PERM_RW}
-CHANGE_RWM = {'Action' : 'Change', 'Perms' : PERM_RWM}
+def remove_user_ifperms(user, perms): return(make_permact({'AND' : [perms, dic_handle_eq(user)]}, REMOVE))
 
 user_handle = dic_handle_in('User-')
 group_handle = dic_handle_in('Group-')
@@ -52,6 +53,7 @@ read_true = def_perm('Read', True, 'eq')
 write_true = def_perm('Write', True, 'eq')
 manage_true = def_perm('Manage', True, 'eq')
 RWM_true = {'AND' : [read_true, write_true, manage_true]}
+RW_true = {'AND' : [read_true, write_true]}
 
 # The following will work correctly if the perm keys are not defined (i.e. no Write key means Write False)
 read_false = {'NOT' : read_true}
@@ -117,6 +119,12 @@ usr_britton = 'User-119'
 usr_augusto = 'User-213'
 usr_ford = 'User-123'
 usr_miska = 'User-305'
+usr_elias = 'User-133'
+grp_EAP = 'Group-66'
+usr_mclean = 'User-236'
+usr_bauman = 'User-467'
+usr_macintosh = 'User-63'
+usr_phillips = 'User-145'
 
 
 REMOVE_INACTIVE =   [remove_user(usr_szeto), 
@@ -199,13 +207,6 @@ PERMACT_REMOVE_szeto = remove_user(usr_szeto)
 
 usr_str_managers = {'OR' : [dic_handle_eq(usr_chylek), dic_handle_eq(usr_amir), dic_handle_eq(usr_kyle)]}
 
-SET_REMOVE_UNNEEDED = {
-        'ObjSel'    : { 'Criteria' : docORcol},
-        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
-        'PermAct'   : [ PERMACT_REMOVE_ro_users,
-                        PERMACT_REMOVE_ro_groups_except_se_reader,
-                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R]}
-
 SET_SE_READERSHIP = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
@@ -215,15 +216,42 @@ SET_SE_READERSHIP = {
                         PERMACT_REMOVE_ro_groups_except_se_reader,
                         PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
                         remove_user(grp_all_noEAR)]} 
-                        
-SET_IRIS_REMOVEUSERS_1 = {
+
+SET_REMOVE_RO_IF_SE_READERSHIP = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
-        'PermAct'   : [ remove_user(usr_site_admin),
-                        remove_user(usr_chylek),
-                        remove_user(usr_crampton),
-                        remove_user(usr_holly),
-                        remove_user(grp_all_users)]}
+        'PermSel'   : { 'Criteria' : [check_user_perms(grp_SE_readership,read_true)]},
+        'PermAct'   : [ PERMACT_CHANGE_se_readership_RO,
+                        PERMACT_REMOVE_ro_users,
+                        PERMACT_REMOVE_ro_groups_except_se_reader,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        remove_user(grp_all_noEAR)]} 
+                        
+SET_REMOVE_INACTIVE = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [ remove_user(usr_szeto), 
+                        remove_user(usr_taylor), 
+                        remove_user(usr_hubin),
+                        remove_user(usr_erickson),
+                        remove_user(usr_britton),
+                        remove_user(usr_augusto),
+                        remove_user(usr_miska),
+                        remove_user(usr_elias),
+                        remove_user(grp_EAP),
+                        remove_user(usr_mclean),
+                        remove_user(usr_bauman), 
+                        remove_user(usr_macintosh),   
+                        remove_user(usr_phillips),
+                        remove_user('Group-170'),
+                        remove_user('Group-397'),    
+                        remove_user('Group-675'),  
+                        remove_user('Group-123'),  
+                        remove_user('Group-223'),  
+                        remove_user('Group-234'),    
+                        remove_user('Group-134'),   
+                        remove_user('Group-108')                                      
+                         ]}
 
 SET_IRIS_REMOVEUSERS_2 = {
         'ObjSel'    : { 'Criteria' : docORcol},
@@ -304,16 +332,7 @@ SET_REPLACE_IRIS_EAR_WITH_ALL = {
                         PERMACT_CHANGE_se_readership_RO,
                         PERMACT_REMOVE_ro_users,
                         PERMACT_REMOVE_ro_groups_except_IRIS_SEread,
-                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
-                        remove_user(grp_all_noEAR),
-                        remove_user(usr_szeto), 
-                        remove_user(usr_taylor), 
-                        remove_user(usr_hubin),
-                        remove_user(usr_erickson),
-                        remove_user(usr_britton),
-                        remove_user(usr_augusto),
-                        remove_user(usr_miska),
-                        remove_user(usr_ford)]}
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R]}
   
 SET_ADD_IRIS_MANAGER = {
         'ObjSel'    : {'Criteria' : docORcol},
@@ -322,3 +341,9 @@ SET_ADD_IRIS_MANAGER = {
                                     check_user_perms(usr_larkin,RWM_true),
                                     check_user_perms(usr_wright,RWM_true)]},
         'PermAct'   : [ add_user(grp_IRIS_MANAGE, PERM_RWM) ]}
+        
+SET_IRIS_TEAM = {
+        'ObjSel'    : {'Criteria' : docORcol},
+        'ObjAct'    : {'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermSel'   : {'Criteria' : [check_user_perms(grp_IRIS_team,RW_true)]},
+        'PermAct'   : []}

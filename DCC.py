@@ -288,7 +288,7 @@ def prop_get(s, handle, **kwargs):
         if debug: print('isCached:', isCached)
     
     if not isCached:
-        if debug: print('Calling DCC, InfoSet =', infoSet)
+        if debug: print('Calling DCC API from prop_get: ',infoSet, handle)
         if infoSet in infoDic:
             xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
             r = s.post(url,data=xml,headers=headers)
