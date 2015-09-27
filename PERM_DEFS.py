@@ -29,19 +29,23 @@ CHANGE_R = {'Action' : 'Change', 'Perms' : PERM_R}
 CHANGE_RW = {'Action' : 'Change', 'Perms' : PERM_RW}
 CHANGE_RWM = {'Action' : 'Change', 'Perms' : PERM_RWM}
 
+# Defs for Basic dictionary functionality
 def def_perm(k,v,m): return({'InDict' : {'key' : k, 'val' : v, 'match' : m}})
 def dic_handle_eq(hdl): return(def_perm('handle',hdl,'eq'))
 def dic_handle_in(hdl): return(def_perm('handle',hdl,'in'))
 def dic_handle_not_eq(hdl): return({'NOT' : dic_handle_eq(hdl)})
 def dic_handle_not_in(hdl): return({'NOT' : dic_handle_in(hdl)})
-def make_permact(criteria, action): return({'Criteria' : criteria, 'Action' : action})
 
-# Individual user perm defs
+# Individual user perm defs (both Criteria and Action)
+def make_permact(criteria, action): return({'Criteria' : criteria, 'Action' : action})
 def remove_user(user): return(make_permact(dic_handle_eq(user), REMOVE))
 def add_user(user,perms): return({  'Action': {'Action' : 'Add', 'Handle' : user, 'Perms' : perms},
                                     'Criteria': {'NOT' : dic_handle_eq(user)}})
-def check_user_perms(user, perms): return({'AND' : [dic_handle_eq(user), perms]})
 def remove_user_ifperms(user, perms): return(make_permact({'AND' : [perms, dic_handle_eq(user)]}, REMOVE))
+
+# Defs used with Criteria dictionary field
+def check_user_perms(user, perms): return({'AND' : [dic_handle_eq(user), perms]})
+def excl_crit_user(user): return({'NOT' : dic_handle_eq( user )})
 
 user_handle = dic_handle_in('User-')
 group_handle = dic_handle_in('Group-')
@@ -185,12 +189,13 @@ obj_actions_dict = {}
 PERMACT_REMOVE_ro_users = make_permact(user_read_only, REMOVE)
 
 # Remove read_only groups (except SE readership all)
-PERMACT_REMOVE_ro_groups_except_se_reader = make_permact({'AND' : [group_read_only, no_se_readership]}, REMOVE)
 
 PERMACT_REMOVE_ro_groups_except_IRIS_SEread = make_permact({'AND' : [group_read_only, no_se_readership, no_IRIS_team]}, REMOVE)
 
 # Remove group or user with no Read, but Write and/or Manage
 PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R = make_permact(perm_W_or_M_no_R, REMOVE)
+
+PERMACT_REMOVE_grp_usr_perm_none = make_permact(perm_none, REMOVE)
 
 # Change permissions to add Read in cases where there is Write Only
 PERMACT_CHANGE_W_to_RW = make_permact(perm_write_only, CHANGE_RW)
@@ -212,6 +217,8 @@ PERMACT_REMOVE_szeto = remove_user(usr_szeto)
 
 usr_str_managers = {'OR' : [dic_handle_eq(usr_chylek), dic_handle_eq(usr_amir), dic_handle_eq(usr_kyle)]}
 
+PERMACT_REMOVE_ro_groups_except_se_reader = make_permact({'AND' : [group_read_only, no_se_readership]}, REMOVE)
+
 SET_SE_READERSHIP = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
@@ -220,6 +227,31 @@ SET_SE_READERSHIP = {
                         PERMACT_REMOVE_ro_users,
                         PERMACT_REMOVE_ro_groups_except_se_reader,
                         PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        PERMACT_REMOVE_grp_usr_perm_none,
+                        remove_inactive,
+                        remove_user(grp_all_noEAR)]} 
+
+grp_NRCTC_ext = 'Group-644'
+grp_NRCTC_obs = 'Group-647'
+grp_NFIRAOS_team = 'Group-128'
+
+PERMACT_REMOVE_ro_groups_NRTC = make_permact({'AND' : [ group_read_only, 
+                                                        excl_crit_user(grp_SE_readership),  
+                                                        excl_crit_user(grp_NRCTC_ext),
+                                                        excl_crit_user(grp_NRCTC_obs), 
+                                                        excl_crit_user(grp_NFIRAOS_team)
+                                                        ]},REMOVE)
+
+SET_PERM_NRTCPDR = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [ PERMACT_ADD_se_readership,
+                        PERMACT_CHANGE_se_readership_RO,
+                        PERMACT_REMOVE_ro_users,
+                        PERMACT_REMOVE_ro_groups_NRTC,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        PERMACT_REMOVE_grp_usr_perm_none,
+                        remove_inactive,
                         remove_user(grp_all_noEAR)]} 
 
 SET_REMOVE_RO_IF_SE_READERSHIP = {
@@ -230,6 +262,7 @@ SET_REMOVE_RO_IF_SE_READERSHIP = {
                         PERMACT_REMOVE_ro_users,
                         PERMACT_REMOVE_ro_groups_except_se_reader,
                         PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        PERMACT_REMOVE_grp_usr_perm_none,
                         remove_user(grp_all_noEAR)]} 
                         
 SET_REMOVE_INACTIVE = {
