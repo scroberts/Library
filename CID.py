@@ -172,7 +172,7 @@ def gen_ss_cid(s, dl):
         print("trying", d)
         if 'Document-' in d:
             # CID link is to a document Handle
-            doc = DCC.prop_get(s,d,InfoSet = 'DocAll')
+            doc = DCC.prop_get(s,d,InfoSet = 'DocBasic')
             # Now read preferred version
             prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll')
             # Subject Document
@@ -200,7 +200,7 @@ def gen_ss_cid(s, dl):
         elif 'Version-' in d:
             # CID link is to a version handle
             ver = DCC.prop_get(s,d,InfoSet = 'VerAll')
-            doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocAll')
+            doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocBasic')
             # Subject Document
             ssrow.append(doc['handle'])
             ssrow.append(doc['title'])

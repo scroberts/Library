@@ -236,7 +236,6 @@ def prop_get(s, handle, **kwargs):
     #  InfoSet = Children - Collection Children
     #  InfoSet = CollData - Information about Collection
     #  InfoSet = CollCont - Information about Collection Content (See Depth) 
-    #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
     #  InfoSet = DocDate - Document last modified date
     #  InfoSet = Group - Group information
@@ -247,7 +246,7 @@ def prop_get(s, handle, **kwargs):
     #  RetDom - Return BeautifulSoup object rather than file data structure
     #  WriteProp = (True|False) - Write .html to disk?
     #  Print = (True|False) - Call print function on InfoSet?
-    
+
     url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'Children' : '<children/>',
@@ -255,7 +254,6 @@ def prop_get(s, handle, **kwargs):
                 'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
                 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
-                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><getlastmodified/><summary/><parents/><versions/>',
                 'Group': '<entityowner/><handle/><parents/><children/>',
                 'Locations': '<parents/>',
                 'Parents': '<parents/>',
@@ -318,8 +316,6 @@ def prop_print(infoSet, fd):
         print_parents(fd)
     elif infoSet == 'Children':
         print_children(fd)
-    elif infoSet == 'DocAll':
-        print_doc_all(fd)
     elif infoSet == 'VerAll':
         print_ver(fd)
     elif infoSet == 'CollData':
@@ -349,8 +345,6 @@ def prop_scrape(dom, infoSet):
         fd = []
         for par in dom.find("children").find_all("dsref"):
             fd.append([get_handle(par['handle']),par.displayname.text])
-    elif infoSet == 'DocAll':
-        fd = read_doc_data(dom)
     elif infoSet == 'VerAll':
         fd = read_ver_data(dom)   
     elif infoSet == 'CollData':
@@ -779,9 +773,6 @@ def test_props():
     
     start = time.time()
 
-    print('Call 1 DocAll')
-    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
-
     print('Call 2 DocBasic')
     fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
 
@@ -806,7 +797,7 @@ def test_props():
     fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
 
     print('Call 9 DocData, Perms, Children')
-    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
     fd['permissions'] = prop_get(s, dochandle, InfoSet = 'Perms', WriteProp = True, Print = True)    
     
     end = time.time()

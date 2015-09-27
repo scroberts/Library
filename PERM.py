@@ -327,7 +327,7 @@ def test_fix_set():
 
 
 def test_id_perm_changes():
-    fd = FileSys.file_read_json('Document-4780_DocAll')
+    fd = FileSys.file_read_json('Document-4780_DocBasic')
     permdata = FileSys.file_read_json('Document-4780_Perms')
     handle = 'Document-4780'
     set = PERM_DEFS.setA

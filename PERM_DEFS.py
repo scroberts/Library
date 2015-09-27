@@ -74,6 +74,11 @@ CTR_doc = def_perm('tmtnum', '.CTR.', 'in')
 OPT_doc = def_perm('tmtnum', '.OPT.', 'in')
 TEL_doc = def_perm('tmtnum', '.TEL.', 'in')
 
+inactive_user = def_perm('name','INACTIVE','in')
+remove_inactive = make_permact(inactive_user, REMOVE)
+
+remove_perm_none = make_permact(perm_none,REMOVE)
+
 # Groups
 grp_all_users = 'Group-4'
 grp_all_noEAR = 'Group-33'
@@ -230,27 +235,17 @@ SET_REMOVE_RO_IF_SE_READERSHIP = {
 SET_REMOVE_INACTIVE = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
-        'PermAct'   : [ remove_user(usr_szeto), 
-                        remove_user(usr_taylor), 
+        'PermAct'   : [ remove_inactive,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        remove_perm_none,
                         remove_user(usr_hubin),
-                        remove_user(usr_erickson),
-                        remove_user(usr_britton),
-                        remove_user(usr_augusto),
-                        remove_user(usr_miska),
                         remove_user(usr_elias),
                         remove_user(grp_EAP),
                         remove_user(usr_mclean),
                         remove_user(usr_bauman), 
                         remove_user(usr_macintosh),   
                         remove_user(usr_phillips),
-                        remove_user('Group-170'),
-                        remove_user('Group-397'),    
-                        remove_user('Group-675'),  
-                        remove_user('Group-123'),  
-                        remove_user('Group-223'),  
-                        remove_user('Group-234'),    
-                        remove_user('Group-134'),   
-                        remove_user('Group-108')                                      
+                        remove_user('User-1083')                                   
                          ]}
 
 SET_IRIS_REMOVEUSERS_2 = {
@@ -313,7 +308,10 @@ SET_REMOVE_STR_MANAGERS = {
         'PermSel'   : {'Criteria' : [usr_str_managers]},
         'PermAct'   : [ remove_user(usr_chylek),
                         remove_user(usr_amir),
-                        remove_user(usr_kyle),                        
+                        remove_user(usr_kyle),
+                        remove_inactive,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,  
+                        remove_perm_none             
                         ]}
 
 grp_noEAR_READ = {'AND' : [dic_handle_eq(grp_all_noEAR), read_true]}
