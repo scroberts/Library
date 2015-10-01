@@ -3,6 +3,7 @@
 # external modules
 
 # my modules
+import PERM
 
 debug = False
 
@@ -47,6 +48,11 @@ def remove_user_ifperms(user, perms): return(make_permact({'AND' : [perms, dic_h
 def check_user_perms(user, perms): return({'AND' : [dic_handle_eq(user), perms]})
 def excl_crit_user(user): return({'NOT' : dic_handle_eq( user )})
 
+def remove_user_if_group(s, set, grp_handle, perms):
+    ghs = PERM.get_group_handles(s, grp_handle)
+    for gh in ghs:
+        set['PermAct'].append(remove_user_ifperms(gh, perms)) 
+
 user_handle = dic_handle_in('User-')
 group_handle = dic_handle_in('Group-')
 doc_handle = dic_handle_in('Document-')
@@ -63,6 +69,7 @@ RW_true = {'AND' : [read_true, write_true]}
 read_false = {'NOT' : read_true}
 write_false = {'NOT' : write_true}
 manage_false = {'NOT' : manage_true}
+WM_false = {'AND' : [write_false, manage_false]}
 
 user_read_only = {'AND' : [user_handle, read_true, write_false, manage_false]}
 user_RWM = {'AND': [user_handle, read_true, write_true, manage_true]}
@@ -259,6 +266,34 @@ SET_REMOVE_RO_IF_SE_READERSHIP = {
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermSel'   : { 'Criteria' : [check_user_perms(grp_SE_readership,read_true)]},
         'PermAct'   : [ PERMACT_CHANGE_se_readership_RO,
+                        PERMACT_REMOVE_ro_users,
+                        PERMACT_REMOVE_ro_groups_except_se_reader,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        PERMACT_REMOVE_grp_usr_perm_none,
+                        remove_user(grp_all_noEAR)]} 
+
+grp_naocEAR = 'Group-380'
+grp_niaotEAR = 'Group-386'
+grp_optics = 'Group-72'
+
+SET_M1S_Suijian = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [ add_user(grp_naocEAR,PERM_R),
+                        add_user(grp_niaotEAR,PERM_RW)
+                            ]} 
+grp_CryoTeam = 'Group-670'
+grp_CryoManager = 'Group-671'             
+               
+SET_CRYO = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [ remove_user(usr_crampton),
+                        remove_user('User-2'),
+                        add_user(grp_CryoTeam,PERM_RW),
+                        add_user(grp_CryoManager,PERM_RWM),
+                        PERMACT_ADD_se_readership,
+                        PERMACT_CHANGE_se_readership_RO,
                         PERMACT_REMOVE_ro_users,
                         PERMACT_REMOVE_ro_groups_except_se_reader,
                         PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
