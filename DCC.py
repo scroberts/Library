@@ -236,7 +236,6 @@ def prop_get(s, handle, **kwargs):
     #  InfoSet = Children - Collection Children
     #  InfoSet = CollData - Information about Collection
     #  InfoSet = CollCont - Information about Collection Content (See Depth) 
-    #  InfoSet = DocAll - All Document information
     #  InfoSet = DocBasic - Document basic information
     #  InfoSet = DocDate - Document last modified date
     #  InfoSet = Group - Group information
@@ -247,23 +246,23 @@ def prop_get(s, handle, **kwargs):
     #  RetDom - Return BeautifulSoup object rather than file data structure
     #  WriteProp = (True|False) - Write .html to disk?
     #  Print = (True|False) - Call print function on InfoSet?
-    
+
     url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
-    infoDic = { 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
+    infoDic = { 'Children' : '<children/>',
+                'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',    
+                'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
+                'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
                 'Group': '<entityowner/><handle/><parents/><children/>',
-                'User': '<entityowner/><handle/><parents/>',
+                'Locations': '<parents/>',
+                'Parents': '<parents/>',
+                'Perms': '<private/><acl/>',
+                'Summary' : '<summary/>',
                 'Title': '<handle/>',
                 'User': '<entityowner/><handle/><parents/>',
-                'Parents': '<parents/>',
-                'Children' : '<children/>',
-                'Perms': '<private/><acl/>',
-                'CollData' : '<title/><summary/><keywords/><entityowner/><getlastmodified/>',
-                'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',
-                'Summary' : '<summary/>',
-                'DocAll' : '<author/><title/><handle/><keywords/><entityowner/><webdav_title/><document_tree/><getlastmodified/><summary/><parents/><versions/>',
-                'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>'}
+                'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>',
+                'Versions' : '<versions/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     if debug: print('infoSet:',infoSet)
@@ -287,7 +286,7 @@ def prop_get(s, handle, **kwargs):
         if debug: print('isCached:', isCached)
     
     if not isCached:
-        if debug: print('Calling DCC, InfoSet =', infoSet)
+        if debug: print('Calling DCC API from prop_get: ',infoSet, handle)
         if infoSet in infoDic:
             xml = """<?xml version="1.0" ?><propfind><prop>""" + infoDic[infoSet] + """</prop></propfind>"""
             r = s.post(url,data=xml,headers=headers)
@@ -317,8 +316,6 @@ def prop_print(infoSet, fd):
         print_parents(fd)
     elif infoSet == 'Children':
         print_children(fd)
-    elif infoSet == 'DocAll':
-        print_doc_all(fd)
     elif infoSet == 'VerAll':
         print_ver(fd)
     elif infoSet == 'CollData':
@@ -348,8 +345,6 @@ def prop_scrape(dom, infoSet):
         fd = []
         for par in dom.find("children").find_all("dsref"):
             fd.append([get_handle(par['handle']),par.displayname.text])
-    elif infoSet == 'DocAll':
-        fd = read_doc_data(dom)
     elif infoSet == 'VerAll':
         fd = read_ver_data(dom)   
     elif infoSet == 'CollData':
@@ -436,6 +431,17 @@ def print_doc_all(fd):
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
         print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
     print("\n*** End Document Entry", fd['handle'], "***\n")
+    
+def print_locations(fd):
+    print("\nLocations...")
+    for loc in sorted(fd['locations'], key = lambda x: x[0]):
+        print(loc[0],", \"",loc[1],"\"", sep="")
+
+def print_versions(fd):
+    print("\nVersions...")
+    for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
+        print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
+
 
 def print_parents(fd):   
     print("\nParents...")
@@ -535,7 +541,7 @@ def read_doc_data(dom):
     fd['title'] = dom.displayname.text
     fd['handle'] = get_handle(dom.href.text)
     fd['tmtnum'] = dom.summary.text
-    fd['prefver'] = dom.preferred_version.dsref['handle']
+
     fd['filename'] = dom.webdav_title.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
@@ -543,14 +549,35 @@ def read_doc_data(dom):
     fd['author'] = dom.author.text
     fd['keywords'] = dom.keywords.text
     fd['date'] = dom.getlastmodified.text
+    
     fd['locations'] = []
-    fd['versions'] = []
     colls = dom.find("parents").find_all("dsref")
     for coll in colls:
         fd['locations'].append([coll['handle'],coll.displayname.text])
+        
+    fd['versions'] = []        
+    fd['prefver'] = dom.preferred_version.dsref['handle']
     vers = dom.find("versions").find_all("version")
     for ver in vers:
         fd['versions'].append([ver.dsref['handle'],ver.comment.text,ver.videntifier.text.zfill(2),ver.username.text])
+        
+    return(fd)
+    
+def read_versions(dom):
+    fd = {}
+    fd['versions'] = []        
+    fd['prefver'] = dom.preferred_version.dsref['handle']
+    vers = dom.find("versions").find_all("version")
+    for ver in vers:
+        fd['versions'].append([ver.dsref['handle'],ver.comment.text,ver.videntifier.text.zfill(2),ver.username.text])
+    return(fd)
+
+def read_locations(dom):
+    fd = {}
+    fd['locations'] = []
+    colls = dom.find("parents").find_all("dsref")
+    for coll in colls:
+        fd['locations'].append([coll['handle'],coll.displayname.text])
     return(fd)
     
 def read_group(dom):
@@ -633,9 +660,24 @@ def read_ver_data(dom):
     fd['date'] = dom.getlastmodified.text
     return(fd)
     
+def set_private(s, handle, private_flag):
+    # fd follows the permissions dictionary format
+    
+    url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
+    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
+    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop>'''
+    if private_flag == True:
+        xml += '''<private>1</private>'''
+    else:
+        xml += '''<private></private>'''
+    xml += '''</prop></set></propertyupdate>'''
+    r = s.post(url,data=xml,headers=headers)
+    print("Permission Change Status Code:", r.status_code)
+
 def set_permissions(s,handle,permdata):
     # fd follows the permissions dictionary format
     
+    if debug: print('\n\nPermdata:', permdata, '\n\n')
     url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><acl handle="''' 
@@ -660,13 +702,16 @@ def set_permissions(s,handle,permdata):
         if 'File' in handle or 'Document' in handle:
             xml += '''</grant><cascade/></ace>'''   
     xml += '''</acl>'''
-    if permdata['private'] == True:
-        xml += '''<private>1</private>'''
-    else:
-        xml += '''<private></private>'''
+#     if permdata['private'] == True:
+#         xml += '''<private>1</private>'''
+#     else:
+#         xml += '''<private></private>'''
     xml += '''</prop></set></propertyupdate>'''
+    if debug: print(xml)
     r = s.post(url,data=xml,headers=headers)
     print("Permission Change Status Code:", r.status_code)
+    # Now write new permissions back to cache
+    fd = prop_get(s, handle, InfoSet = 'Perms')
 
 
 def test_change_owner():
@@ -728,34 +773,31 @@ def test_props():
     
     start = time.time()
 
-#     print('Call 1 DocAll')
-#     fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
-# 
-#     print('Call 2 DocBasic')
-#     fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
-# 
-#     print('Call 3 CollData')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
-#  
-#     print('Call 4 CollCont Depth = 1')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
-# 
-#     print('Call 5 CollCont Depth = infinity')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
-#  
-#     print('Call 6 Parents')
-#     fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
-# 
-#     print('Call 7 Children')
-#     fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
-#     
-#     print('Call 8 CollData, Perms, Children')
-#     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
-#     fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
-#     fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
+    print('Call 2 DocBasic')
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
+
+    print('Call 3 CollData')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+ 
+    print('Call 4 CollCont Depth = 1')
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
+
+    print('Call 5 CollCont Depth = infinity')
+    fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
+ 
+    print('Call 6 Parents')
+    fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
+
+    print('Call 7 Children')
+    fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
+    
+    print('Call 8 CollData, Perms, Children')
+    fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
+    fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
+    fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
 
     print('Call 9 DocData, Perms, Children')
-    fd = prop_get(s, dochandle, InfoSet = 'DocAll', WriteProp = True, Print = True)
+    fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
     fd['permissions'] = prop_get(s, dochandle, InfoSet = 'Perms', WriteProp = True, Print = True)    
     
     end = time.time()
@@ -766,14 +808,19 @@ def test_user_group():
     # Login to DCC
     s = login(CF.dcc_url + CF.dcc_login)
 
-    grp = 'Group-325'
+    grp = 'Group-666'
     fd = prop_get(s, grp, InfoSet = 'Group', Print = True, WriteProp = True)
+    chandles = []
+    for c in fd['children']:
+        chandles.append(c[0])
+    print(chandles)
+    
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_props()
+#     test_props()
 #     test_version()
 #     test_change_owner()
-#     test_user_group()
+    test_user_group()
 
 

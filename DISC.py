@@ -128,11 +128,13 @@ def get_postentry_author_info( entry ):
     title = ent.text
     
     # If there are carriage returns in the entry there will be multiple "p" instances.
-    pentries = entry.find("div", class_ = "postdescription").find_all("p")
-
-    ent_str = ''
-    for ent in pentries:
-        ent_str = ent_str + '\t' + ent.text
+    try:
+        ent_str = entry.find("div", class_ = "postdescription").text.strip()
+    except:
+        pentries = entry.find("div", class_ = "postdescription").find_all("p")
+        ent_str = ''
+        for ent in pentries:
+            ent_str = ent_str + '\t' + ent.text
     
     return([title, url, author, auth_url, dt, ent_str])
 
@@ -253,12 +255,14 @@ def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
 
             r_dates.append(r_dt)  
             
-            if r_title.upper().find('_DISPOSITION') > -1:
-                r_disposition = r_latest   
-                
-            if r_title.upper().find('_ACTION') > -1:
+            if '_DISPOSITION' in r_title.upper():
+#                 print('r_disposition is :', r_latest)
+                r_disposition = r_latest
+                                
+            if '_ACTION' in r_title.upper():
+#                 print('r_action is :', r_latest)
                 r_action = r_latest
-
+          
             times += 1
 
         # Turn the reps list into a single string    
@@ -367,4 +371,33 @@ def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
 
 def get_discussion(url, htmlfile, xlfile):
     get_discussion_rowcol(url, htmlfile, xlfile, 1, 1)
+    
+def test_bulletin_post():
+    # Login to DCC
+    s = DCC.login(CF.dcc_url + CF.dcc_login)
+    
+    handle = 'Bulletin-6185'
+    
+    title = '_DISPOSITION'
+    
+    description = 'This item is open. MELCO made no reply.'
+#     description = 'This can be closed with a tracked action'
+#     description = "The reply doesn't answer directly to the question of the RIX. The reply seems to say that DP04S-A isn't a document to be reviewed. Is DP04S-A  a review item of FDRP2? Need more clear reply."
+    
+    
+    keywords = 'Reviewer Disposition'
+    
+    create_bb_post(s, title, description, keywords, handle)
+    
+    title = '_ACTION'
+    description = 'ACTION: TBD (To Be Determined) after issue is addressed by MELCO.'
+#     description = 'ACTION: MELCO to study what is the probability of the scenario.'
+#     description = "ACTION: MELCO to add all the safety related drives to the Table 2.1-1."
+    keywords = 'Reviewer ACTION'
+    
+    create_bb_post(s, title, description, keywords, handle)
+
+if __name__ == '__main__':
+    print("Running module test code for",__file__)
+    test_bulletin_post()
 

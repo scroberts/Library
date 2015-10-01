@@ -12,6 +12,200 @@ import FileSys
 import PERM_DEFS
 import Match
 
+debug = False
+
+def get_group_handles(s,grp):
+    fd = DCC.prop_get(s, grp, InfoSet = 'Group', Print = True, WriteProp = True)
+    chandles = []
+    for c in fd['children']:
+        chandles.append(c[0])
+    return(chandles)
+
+def check_perms(s, set, handle, treename, **kwargs):
+    ask_flag = kwargs.get('Ask', True)
+    if not ask_flag:
+        if not MyUtil.get_yn('!!! Warning !!! ask = False: Will not ask to make changes, okay? Enter N to Exit, Y to Continue:'):
+            print('exiting...')
+            sys.exit(0)
+    tr = Tree.return_tree(s, handle, treename)
+    handles = Tree.get_flat_tree(tr)
+    for handle in handles:
+        fix_set(s, handle, set, **kwargs)
+        
+def modify_dcc_perms(s, handle, permdata, **kwargs):
+    ask_flag = kwargs.get('Ask',True)
+    print('\n   Modifying Permissions to:',handle)
+    DCC.print_perms(permdata)       
+    if ask_flag == False or MyUtil.get_yn('Change Permissions (Y/N)?'):
+        print('Changing permissions...')
+        DCC.set_permissions(s, handle, permdata)
+
+def make_perm_changes(s, handle, permdata, removelist, changelist, addlist, **kwargs):
+    ask_flag = kwargs.get('Ask',True)
+    mod_flag = False
+    
+    if ask_flag == True:
+        ans = MyUtil.get_all_none_indiv('Make Changes? All/None/Individual (A/N/I)?')
+        if ans == 'All':
+            ask_flag = False
+        elif ans == 'None':
+            return
+    
+    for perm in removelist:
+        print('Remove?: ',end='')
+        DCC.print_perm(perm) 
+        if ask_flag == False or MyUtil.get_yn(': (Y/N)?'):
+            if ask_flag == False: print()
+            mod_flag = True
+            MyUtil.remove_dict_from_list(permdata['perms'],'handle',perm['handle'])
+
+    for chperm in changelist:
+        print('Change?:', end='')
+        DCC.print_perm(chperm) 
+        if ask_flag == False or MyUtil.get_yn(': (Y/N)?'):
+            if ask_flag == False: print()
+            mod_flag = True
+            for perm in permdata['perms']:
+                if perm['handle'] == chperm['handle']:
+                    if 'Read' in perm: del(perm['Read'])
+                    if 'Write'in perm: del(perm['Write'])
+                    if 'Manage' in perm: del(perm['Manage'])
+                    for key,val in chperm.items():
+                        perm[key] = val
+                              
+    for addperm in addlist:
+        print('Add?:', end='')
+        DCC.print_perm(addperm)    
+        if ask_flag == False or MyUtil.get_yn(': (Y/N)?'):
+            if ask_flag == False: print()
+            mod_flag = True
+            permdata['perms'].append(addperm)
+        if debug: DCC.print_perms(permdata)
+    
+    if mod_flag:
+        # check ask_flag since it may have been modified from kwargs value
+        if ask_flag == False:
+            modify_dcc_perms(s, handle, permdata, Ask=False)
+        else:
+            modify_dcc_perms(s,handle,permdata, **kwargs)
+
+def check_fd_sel(fd, set):
+    try:
+        obj_sel = set['ObjSel']['Criteria']
+        if Match.parse(obj_sel, fd):
+            return(True)
+        return(False)
+    except:
+        if debug: print('ObjSel is not defined')
+        return(True)
+
+def check_perm_sel(permdata, set):
+    # PermSel Criteria is a list of checks against permissions.  If the complete list passes
+    # then the PermAct actions will be undertaken.
+    try:
+        perm_sels = set['PermSel']['Criteria']
+        for perm_sel in perm_sels:
+            if debug: print('check_perm_sel:',perm_sel)
+            for perm in permdata['perms']:
+                match_flag = False
+                if Match.parse(perm_sel, perm):
+                    match_flag = True
+                    break
+            if match_flag == False:
+                if debug: print('check_perm_sel: returning False')
+                return(False)
+        if debug: print('check_perm_sel: returning True')
+        return(True)
+    except:
+        if debug: print('PermSel is not defined')
+        return(True)
+
+def print_perm_changes(removelist, changelist, addlist):
+    for perm in removelist:
+        print('??? Remove ??? :',end='')
+        DCC.print_perm(perm,LF=True)
+    for perm in changelist:
+        print('??? Change ??? :',end='')
+        DCC.print_perm(perm,LF=True)
+    for perm in addlist:
+        print('??? Add ??? :',end='')
+        DCC.print_perm(perm,LF=True)
+    print()
+
+def id_perm_changes(s, handle, fd, permdata, set):
+    removelist = []
+    changelist = []
+    addlist = []
+       
+    if not check_fd_sel(fd, set) or not check_perm_sel(permdata, set):
+        return([removelist,changelist,addlist])
+        
+    for perm_act in set['PermAct']:
+        if perm_act['Action']['Action'] == 'Remove':
+            for perm in permdata['perms']:
+                if Match.parse(perm_act['Criteria'], perm):
+                    removelist.append(perm)
+        if perm_act['Action']['Action'] == 'Change':
+            for perm in permdata['perms']:
+                if Match.parse(perm_act['Criteria'], perm):
+                    # delete the old permission
+                    newperm = perm.copy()
+                    if 'Read' in perm: del(newperm['Read'])
+                    if 'Write'in perm: del(newperm['Write'])
+                    if 'Manage' in perm: del(newperm['Manage'])
+                    for key,val in perm_act['Action']['Perms'].items():
+                        newperm[key] = val
+                    changelist.append(newperm)  
+        if perm_act['Action']['Action'] == 'Add':
+            addFlag = True
+            for perm in permdata['perms']:
+                if not Match.parse(perm_act['Criteria'], perm):
+                    addFlag = False
+            if addFlag:
+                pEntry = {}
+                pEntry['handle'] = perm_act['Action']['Handle']
+                grpdata = DCC.prop_get(s, pEntry['handle'], InfoSet = 'Title')
+                pEntry['name'] = grpdata['title']
+                if 'Read' in perm_act['Action']['Perms']:
+                    pEntry['Read'] = perm_act['Action']['Perms']['Read']
+                if 'Write' in perm_act['Action']['Perms']:
+                    pEntry['Write'] = perm_act['Action']['Perms']['Write']
+                if 'Manage' in perm_act['Action']['Perms']:
+                    pEntry['Manage'] = perm_act['Action']['Perms']['Manage']
+                addlist.append(pEntry) 
+    return([removelist, changelist, addlist])
+
+def fix_set(s, handle, set, **kwargs):
+    # kwargs
+    #   ask = True | False, Do/Don't ask if changes should be made (!!! Dangerous !!!)
+    #   default is ask
+
+    if 'Document-' in handle:
+        fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic')
+    elif 'Collection-' in handle:
+        fd = DCC.prop_get(s, handle, InfoSet = 'CollData')
+    else:
+        fd = DCC.prop_get(s, handle, InfoSet = 'Title')    
+    permdata = DCC.prop_get(s, handle, InfoSet = 'Perms')
+    print(fd['handle'], ':', fd['title']) 
+    
+    fd['permissions'] = permdata
+    [removelist, changelist, addlist] = id_perm_changes(s,handle, fd, permdata, set) 
+    ch_flag = False
+    if len(removelist) or len(changelist) or len(addlist):
+        print('\n##############       ENTRY       ##############')
+        if 'Document-' in handle:
+            DCC.print_doc_basic(fd)
+        elif 'Collection-' in handle:
+            DCC.print_coll_data(fd)
+        else:
+            print('Not Document or Collection:', handle, ':', fd['title'])   
+        print('https://docushare.tmt.org/docushare/dsweb/ServicesLib/',handle,'/Permissions',sep='')
+        DCC.print_perms(permdata)    
+        print('\nSuggested Changes...')
+        print_perm_changes(removelist, changelist, addlist)
+        make_perm_changes(s, handle, permdata, removelist, changelist, addlist, **kwargs)
+
 def printCheckCriteria(target, permissions):
     setnum = 0
     print('\n+++ Criteria for permissions check: +++')
@@ -58,246 +252,7 @@ def printCheckPerms(perm,plist):
     if 'M' in plist and manage_okay == False:
         perms_okay = False    
     return perms_okay
-
-def check_criteria(perm, action):
-    PermReadFlag = perm.get('Read',False)
-    PermWriteFlag = perm.get('Write',False)
-    PermManageFlag = perm.get('Manage',False)
-    PermSearchFlag = perm.get('Search',False)
     
-    cFlag = True
-    for crit,val in action['Criteria'].items():
-#         print('Criteria: ', crit, val)
-        if crit == 'HandleMatches' and not val == perm['handle']:
-#             print('Fail on HandleMatches')
-            cFlag = False
-        if crit == 'HandlePattern' and not val in perm['handle']:
-#             print('Fail on HandleContains')
-            cFlag = False
-        if crit == 'Absent' and val in perm['handle']:
-            cFlag = False
-        if crit == 'Search' and not val == PermSearchFlag:
-#             print('Fail on ReadFlag')
-            cFlag = False 
-        if crit == 'Read' and not val == PermReadFlag:
-#             print('Fail on ReadFlag')
-            cFlag = False 
-        if crit == 'Write' and not val == PermWriteFlag:
-#             print('Fail on WriteFlag')
-            cFlag = False 
-        if crit == 'Manage' and not val == PermManageFlag:
-#             print('Fail on ManageFlag')
-            cFlag = False                               
-    return(cFlag)
-
-def modify_dcc_perms(s,handle,permdata):
-    print('Modifying Permissions to:',handle)
-    DCC.print_perms(permdata)       
-    if MyUtil.get_yn('Change Permissions (Y/N)?'):
-        print('Changing permissions...')
-        DCC.set_permissions(s, handle, permdata)
-
-def fixPerm(s, handle, actions):
-    print('\n##############       ENTRY       ##############')
-    if 'Document-' in handle:
-        fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic', Print = True)
-    elif 'Collection-' in handle:
-        fd = DCC.prop_get(s, handle, InfoSet = 'CollData', Print = True)
-    else:
-        fd = DCC.prop_get(s, handle, InfoSet = 'Title')
-        print('Not Document or Collection:', handle, ':', fd['title'])
-    permdata = DCC.prop_get(s, handle, InfoSet = 'Perms', Print = True)
-    fd['permissions'] = permdata
-
-    print('')
-    removelist = []
-    addlist = []
-    changelist = []
-       
-    print('Suggested Changes...')
-    for action in actions:
-        exclude = action.get('Exclude',[])
-        if action['Action'] == 'Remove':
-            for perm in permdata['perms']:
-                if (not perm['handle'] in exclude) and check_criteria(perm, action):
-#                     print('Modify (Remove): ',action['Action'],':',perm['handle'],':',perm['name'],sep='')
-                    print('??? Remove ??? :',end='')
-                    DCC.print_perm(perm,LF=True)
-                    removelist.append(perm)
-        if action['Action'] == 'Change':
-            for perm in permdata['perms']:
-                if (not perm['handle'] in exclude) and check_criteria(perm, action):
-#                     print('Modify (Change:): ',action['Action'],':',perm['handle'],':',perm['name'],action['Perms'],sep='')
-                    # delete the old permission
-                    newperm = perm.copy()
-                    if 'Read' in perm: del(newperm['Read'])
-                    if 'Write'in perm: del(newperm['Write'])
-                    if 'Manage' in perm: del(newperm['Manage'])
-                    for key,val in action['Perms'].items():
-                        newperm[key] = val
-                    changelist.append(newperm)  
-                    print('??? Change ??? :',end='')
-                    DCC.print_perm(newperm,LF=True)
-       
-        if action['Action'] == 'Add':
-            addFlag = True
-            for perm in permdata['perms']:
-                if not check_criteria(perm, action):
-                    addFlag = False
-            if addFlag:
-                pEntry = {}
-#                 print('Modify (Add): ',action['Action'],action['Handle'],action['Perms'])
-                pEntry['handle'] = action['Handle']
-                grpdata = DCC.prop_get(s, pEntry['handle'], InfoSet = 'Title')
-                pEntry['name'] = grpdata['title']
-                if 'Read' in action['Perms']:
-                    pEntry['Read'] = action['Perms']['Read']
-                if 'Write' in action['Perms']:
-                    pEntry['Write'] = action['Perms']['Write']
-                if 'Manage' in action['Perms']:
-                    pEntry['Manage'] = action['Perms']['Manage']
-                addlist.append(pEntry) 
-                print('??? Add ??? :',end='')
-                DCC.print_perm(pEntry,LF=True) 
-    print('')     
-    changeFlag = False
-    
-    print('Make Changes?...')
-    for perm in removelist:
-        print('Remove?: ',end='')
-        DCC.print_perm(perm) 
-        if MyUtil.get_yn(': (Y/N)?'):
-            changeFlag = True
-            MyUtil.remove_dict_from_list(permdata['perms'],'handle',perm['handle'])
-    for newperm in changelist:
-        print('Change?:', end='')
-        DCC.print_perm(newperm) 
-        if MyUtil.get_yn(': (Y/N)?'):
-            changeFlag = True
-            for perm in permdata['perms']:
-                if perm['handle'] == newperm['handle']:
-                    if 'Read' in perm: del(perm['Read'])
-                    if 'Write'in perm: del(perm['Write'])
-                    if 'Manage' in perm: del(perm['Manage'])
-                    for key,val in newperm.items():
-                        perm[key] = val
-    for perm in addlist:
-        print('Add?:', end='')
-        DCC.print_perm(perm)    
-        if MyUtil.get_yn(': (Y/N)?'):
-            changeFlag = True
-            permdata['perms'].append(perm)
-    
-    if changeFlag:
-        modify_dcc_perms(s,handle,permdata)
-        
-def make_perm_changes(s, handle, permdata, removelist, changelist, addlist):
-    mod_flag = False
-    
-    print('Make Changes?...')
-    
-    for perm in removelist:
-        print('Remove?: ',end='')
-        DCC.print_perm(perm) 
-        if MyUtil.get_yn(': (Y/N)?'):
-            mod_flag = True
-            MyUtil.remove_dict_from_list(permdata['perms'],'handle',perm['handle'])
-            
-    for chperm in changelist:
-        print('Change?:', end='')
-        DCC.print_perm(chperm) 
-        if MyUtil.get_yn(': (Y/N)?'):
-            mod_flag = True
-            for perm in permdata['perms']:
-                if perm['handle'] == chperm['handle']:
-                    if 'Read' in perm: del(perm['Read'])
-                    if 'Write'in perm: del(perm['Write'])
-                    if 'Manage' in perm: del(perm['Manage'])
-                    for key,val in chperm.items():
-                        perm[key] = val
-                        
-    for perm in addlist:
-        print('Add?:', end='')
-        DCC.print_perm(perm)    
-        if MyUtil.get_yn(': (Y/N)?'):
-            mod_flag = True
-            permdata['perms'].append(perm)
-    
-    if mod_flag:
-        modify_dcc_perms(s,handle,permdata)
-
-
-def id_perm_changes(s,handle, fd, permdata, set):
-    print('')
-    removelist = []
-    changelist = []
-    addlist = []
-       
-    print('Suggested Changes...')
-
-    for perm_act in set['PermAct']:
-        if perm_act['Action']['Action'] == 'Remove':
-            for perm in permdata['perms']:
-                if Match.parse(perm_act['Criteria'], perm):
-                    print('??? Remove ??? :',end='')
-                    DCC.print_perm(perm,LF=True)
-                    removelist.append(perm)
-        if perm_act['Action']['Action'] == 'Change':
-            for perm in permdata['perms']:
-                if Match.parse(perm_act['Criteria'], perm):
-                    # delete the old permission
-                    newperm = perm.copy()
-                    if 'Read' in perm: del(newperm['Read'])
-                    if 'Write'in perm: del(newperm['Write'])
-                    if 'Manage' in perm: del(newperm['Manage'])
-                    for key,val in perm_act['Action']['Perms'].items():
-                        newperm[key] = val
-                    changelist.append(newperm)  
-                    print('??? Change ??? :',end='')
-                    DCC.print_perm(newperm,LF=True)
-        if perm_act['Action']['Action'] == 'Add':
-            addFlag = True
-            for perm in permdata['perms']:
-                if not Match.parse(perm_act['Criteria'], perm):
-                    addFlag = False
-            if addFlag:
-                pEntry = {}
-                pEntry['handle'] = perm_act['Action']['Handle']
-                grpdata = DCC.prop_get(s, pEntry['handle'], InfoSet = 'Title')
-                pEntry['name'] = grpdata['title']
-                if 'Read' in perm_act['Action']['Perms']:
-                    pEntry['Read'] = perm_act['Action']['Perms']['Read']
-                if 'Write' in perm_act['Action']['Perms']:
-                    pEntry['Write'] = perm_act['Action']['Perms']['Write']
-                if 'Manage' in perm_act['Action']['Perms']:
-                    pEntry['Manage'] = perm_act['Action']['Perms']['Manage']
-                addlist.append(pEntry) 
-                print('??? Add ??? :',end='')
-                DCC.print_perm(pEntry,LF=True) 
-    print('')
-    return([removelist, changelist, addlist])
-      
-
-def fix_set(s, handle, set):
-    print('\n##############       ENTRY       ##############')
-    if 'Document-' in handle:
-        fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic', Print = True)
-    elif 'Collection-' in handle:
-        fd = DCC.prop_get(s, handle, InfoSet = 'CollData', Print = True)
-    else:
-        fd = DCC.prop_get(s, handle, InfoSet = 'Title')
-        print('Not Document or Collection:', handle, ':', fd['title'])
-    permdata = DCC.prop_get(s, handle, InfoSet = 'Perms', Print = True)
-    fd['permissions'] = permdata
-    
-    [removelist, changelist, addlist] = id_perm_changes(s,handle, fd, permdata, set) 
-    print('Remove:', removelist)
-    print('Change:', changelist)
-    print('Add:', addlist)    
-    make_perm_changes(s, handle, permdata, removelist, changelist, addlist)
-
-
-
 def checkPerms(target, permissions):
     # Login to DCC
     s = DCC.login(CF.dcc_url + CF.dcc_login)
@@ -335,7 +290,7 @@ def checkPerms(target, permissions):
 
         if checkFlag:
             OkayPerms = []
-            for perm in sorted(fd["permissions"], key = lambda x: x["handle"]):
+            for perm in sorted(fd["permissions"]["perms"], key = lambda x: x["handle"]):
                 # Go through each set and create a dictionary of entries that have perms okay
                 for sets in permissions:
                     for item,plist in sets.items():
@@ -360,83 +315,6 @@ def checkPerms(target, permissions):
             
     return([passList,failList])
             
-def testPerm():
-    # Define a list data structure of users or groups in sets that are
-    # acceptable if they have read permission to the collections and files
-    # The with the following logic: 
-    #
-    #   All contents of sets must be acceptable in an AND case (i.e. every
-    #       member of a set must have read access to be acceptable) 
-    #
-    #   Permissions will be acceptable if any set is acceptable in an OR
-    #     	sense (i.e. if one set meets the criteria then the the
-    #     	permissions are considered okay)
-
-    # Define the top level collection or document to check
-    target = 'Collection-10071'
-#     target = 'Document-21380'
-#     target = 'Collection-1318'
-    
-    # Define users or groups that will be checked for permissions
-    sys_eng_read = 'Group-325'
-    se_group = 'Group-103'
-    content_admin = 'Group-2'
-    sr_user = 'User-50'
-    tc_user = 'User-1165'
-    
-    # Define the permissions
-    permissions = [{tc_user : 'RWM'}]
-#     permissions = [{sys_eng_read : 'R'},{se_group : 'RW', content_admin : 'RWM'}, {sr_user : 'RWM'}]
-
-    # Call the checkPerms function
-    [passList,failList] = checkPerms(target, permissions)
-    
-    print('\n\n')
-    print('List of docs that pass:', passList)
-    print('List of docs that fail:', failList)
-            
-def testFixPerm():
-    # Login to DCC
-    s = DCC.login(CF.dcc_url + CF.dcc_login)
-     
-    collhandle = 'Collection-286'
-#     exclude = ['Collection-7337','Document-21244', 'Document-26018']
-    exclude = []
-
-    print('excluding from Tree:',exclude)
-    tree = Tree.get_tree(s, collhandle, Exclude = exclude)
-    Tree.print_tree(s,tree)
-    flatTree = Tree.flat_tree(tree, 'root', [])    
-    
-    collhandle = 'Collection-10892'
-    dochandle = 'Document-27819'
-#     dochandle = 'Document-8865'
-#     collhandle = 'Collection-8279'
-    
-
-    actions = [ {'Criteria' : {'HandlePattern' : 'User-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandlePattern' : 'Group-', 'Read' : True, 'Write' : False, 'Manage' : False}, 'Exclude' : ['Group-325', 'Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : True, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'Read' : False, 'Write' : True, 'Manage' : False} ,'Exclude':['Group-4'], 'Action' : 'Change', 'Perms' : {'Read':True, 'Write':True}},
-                {'Criteria' : {'Read' : False, 'Write' : False, 'Manage' : True} ,'Exclude':['Group-4'], 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'Group-4'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'Group-536'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-1083'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-21'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-2'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-1087'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-120'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-1165'}, 'Action' : 'Remove'},
-                {'Criteria' : {'HandleMatches' : 'User-383'}, 'Action' : 'Remove'},
-                {'Criteria' : {'Absent' : 'Group-325'}, 'Action' : 'Add', 'Handle': 'Group-325', 'Perms' : {'Read':True}},
-                {'Criteria' : {'Absent' : 'Group-103'}, 'Action' : 'Add', 'Handle': 'Group-103', 'Perms' : {'Read':True, 'Write':True}}]
-
-    
-    for handle in flatTree:
-        fixPerm(s,handle, actions)
-
-#     fixPerm(s,dochandle,actions)
 
 def test_fix_set():
     # Login to DCC
@@ -449,10 +327,7 @@ def test_fix_set():
 
 
 def test_id_perm_changes():
-
-    
-    
-    fd = FileSys.file_read_json('Document-4780_DocAll')
+    fd = FileSys.file_read_json('Document-4780_DocBasic')
     permdata = FileSys.file_read_json('Document-4780_Perms')
     handle = 'Document-4780'
     set = PERM_DEFS.setA
