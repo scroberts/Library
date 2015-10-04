@@ -18,6 +18,7 @@ import Tree
 import FileSys
 
 debug = False
+DCC_URL = ''
 
 # References for DCC login
 # http://docs.python-requests.org/en/latest/user/quickstart/
@@ -182,12 +183,45 @@ def list_obj_in_coll(s, collhandle, **kwargs):
         fh.close()
     return(objlist)
     
-def login(url):
+def login(url='',**kwargs):
+    # kwargs options:
+    # Site = 'Production' 
+    # Site = 'Test'
+    
+    global DCC_URL
+    
+    if not url:
+        if debug: print('Login: Url argument not supplied')
+        site = kwargs.get('Site') 
+        if site == 'Production':
+            print('\nLogging in to DCC ***Production*** Site')
+            DCC_URL = CF.dcc_url
+            url = CF.dcc_url + CF.dcc_login
+        elif site == 'Test':
+            print('\nLogging in to DCC ***Test*** Site')
+            DCC_URL = CF.dcctest_url          
+            url = CF.dcctest_url + CF.dcc_login
+        else:
+            DCC_URL = url
+            print('Login: site kwarg not understood: ',site)
+            sys.exit(1)
+    else:
+        if debug: print('Login: Url supplied as :', url)
+    
+    print('URL for Docushare is: ',url)
     # See if secrets file exists and if so use credentials from there
     try:
         import secrets
-        uname = secrets.pw['DCC']['login']
-        pword = secrets.pw['DCC']['password']
+        if debug: print('Login: secrets.pw: ',secrets.pw)
+        if CF.dcc_url in url or site == 'Production':
+            uname = secrets.pw['DCC']['login']
+            pword = secrets.pw['DCC']['password']
+        elif CF.dcctest_url in url or site == 'Test':
+            uname = secrets.pw['DCCTest']['login']
+            pword = secrets.pw['DCCTest']['password']
+        else:
+            print('Could not determine password from secrets file')
+                
     except:
         uname = input("Enter TMT Docushare Username:")
         pword = getpass.getpass()
@@ -210,6 +244,7 @@ def login(url):
         
     c = s.cookies
     if debug: print('Cookies:\n', c)
+    if debug: print('DCC_URL = ', DCC_URL)    
     return s
     
 def make_collection(s,parentColl, collName, collDesc):
@@ -660,10 +695,36 @@ def read_ver_data(dom):
     fd['date'] = dom.getlastmodified.text
     return(fd)
     
+def set_metadata(s, dochandle, **kwargs):
+
+    keywords = kwargs.get('Keywords')
+    summary = kwargs.get('Summary')
+    displayname = kwargs.get('Title')
+    description = kwargs.get('Description')
+    
+    url = DCC_URL + "/dsweb/PROPPATCH/" + dochandle
+    headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
+    xml = '''<?xml version="1.0" ?><propertyupdate><set><prop>'''
+    if keywords != None:
+        xml += '''<keywords><![CDATA[''' + keywords + ''']]></keywords>'''
+    if summary != None:
+        xml += '''<summary><![CDATA[''' + summary + ''']]></summary>'''
+    if displayname != None:
+        xml += '''<displayname><![CDATA[''' + displayname + ''']]></displayname>'''
+    if description != None:
+        xml += '''<description><![CDATA[''' + description + ''']]></description>'''
+
+    xml += '''</prop></set></propertyupdate>'''
+    if debug: print(xml)
+    r = s.post(url,data=xml,headers=headers)
+    if debug: print(r.text)
+    if debug: print(r.headers)
+    print("Keywords Change Status Code:", r.status_code)
+    
 def set_private(s, handle, private_flag):
     # fd follows the permissions dictionary format
     
-    url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
+    url = DCC_URL + "/dsweb/PROPPATCH/" + handle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop>'''
     if private_flag == True:
@@ -815,12 +876,21 @@ def test_user_group():
         chandles.append(c[0])
     print(chandles)
     
+def test_keywords():
+    s = login(Site = 'Test')
+    set_metadata(s,'Collection-25',
+        Keywords = 'Keywords: TMTPublished',
+        Summary = 'Summary: Scott Summary',
+        Title = 'Title: Scott Collection',
+        Description = 'Description: Scott Description')
+                                    
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-#     test_props()
+    test_props()
 #     test_version()
 #     test_change_owner()
-    test_user_group()
+#     test_user_group()
+#     test_keywords()
 
 

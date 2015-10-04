@@ -4,6 +4,7 @@
 
 # DCC Module Definitions
 dcc_url = "https://docushare.tmt.org/docushare"
+dcctest_url = "http://docushare-test.tmt.org/docushare"
 dcc_login = "/dsweb/Login"
 dcc_prop = "/dsweb/Services/"
 
