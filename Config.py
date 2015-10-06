@@ -9,6 +9,7 @@ dcc_login = "/dsweb/Login"
 dcc_prop = "/dsweb/Services/"
 
 dccfilepath = r'/Users/sroberts/Dropbox/TMT/Python/DCC Files/'
+reportfilepath = r'/Users/sroberts/Dropbox/TMT/Python/Reports/'
 
 # DocMod Module Definitions
 docs_url_base = 'https://trace-tree.tmt.org/TMT_Requirements/Documents/Documents/'

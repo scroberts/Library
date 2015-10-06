@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 
 # external modules
+import openpyxl
+from openpyxl.styles import Font, Style, Alignment
+from openpyxl.styles.colors import BLUE
+
 
 # my modules
 import DCC
 import Config as CF
 import FileSys
 import MyUtil
+
+# Set Excel Styles
+# Excel hyperlink style is calibri 11, underline blue
+font_url_style = Font(color = BLUE, underline = 'single')
+bold_style = Font(bold = True)
+align_hv_cen_style = Alignment(horizontal = 'center', vertical = 'center')
+align_ver_cen_style = Alignment(vertical = 'center')
+align_hv_cen_wrap_style = Alignment(horizontal = 'center', vertical = 'center', wrap_text = True)
 
 def return_tree(s, target, rootfilename, **kwargs):
     load_flag = kwargs.get('Load')
@@ -140,7 +152,7 @@ def iter_html_tree(s, htmlfile, tree, key, indent):
         iter_html_tree(s, htmlfile, tree, col, indent+2)
         
 def html_tree(s,tree,froot):
-    htmlfile = open(CF.dccfilepath + froot+'.html','w+')
+    htmlfile = open(CF.reportfilepath + froot+'.html','w+')
     print('<!DOCTYPE html><html><body>',file = htmlfile)
     print('<style> p {line-height: 0.35} </style>', file = htmlfile)
     print('<h1>',froot,'</h1>', file = htmlfile)
@@ -149,6 +161,118 @@ def html_tree(s,tree,froot):
     
     print('</body></html>',file = htmlfile)  
     htmlfile.close
+
+def xls_tree_headings(ws):
+    col = 1
+    ws.cell(row = 1, column = col).value = "ID"
+    col += 1
+    ws.cell(row = 1, column = col).value = "Collection Handle"
+    col += 1
+    ws.cell(row = 1, column = col).value = "Collection Title"
+    col += 1
+    ws.cell(row = 1, column = col).value = "Document Title"
+    col += 1
+    ws.cell(row = 1, column = col).value = "Document Handle"
+    col += 1    
+    ws.cell(row = 1, column = col).value = "Version Handle"   
+    col += 1
+    ws.cell(row = 1, column = col).value = "Owner"
+    col += 1
+    ws.cell(row = 1, column = col).value = "File Name"
+    col += 1
+    ws.cell(row = 1, column = col).value = "Date Modified"
+    
+    colcnt = col+1
+    
+    for col in range(1, colcnt):
+        ws.cell(row = 1, column = col).alignment = align_hv_cen_wrap_style
+        ws.cell(row = 1, column = col).font = bold_style
+
+
+def xls_print_ssrow(ws, collData, docData, ssrow):
+    col = 1
+    
+    # Column 1: ID    
+    ws.cell(row = ssrow, column = col).value = ssrow-1
+    ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
+    col += 1
+    
+    # Column 2: Coll Handle
+    ws.cell(row = ssrow, column = col).value = collData['handle']
+    ws.cell(row = ssrow, column = col).font = font_url_style
+    ws.cell(row = ssrow, column = col).hyperlink = url_view(collData['handle'])
+    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
+    col += 1
+
+    # Column 3: Coll Name
+    ws.cell(row = ssrow, column = col).value = collData['title']
+    ws.cell(row = ssrow, column = col).font = font_url_style
+    ws.cell(row = ssrow, column = col).hyperlink = url_access(collData['handle'])
+    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
+    col += 1    
+    
+    # Column 4: Doc Title
+    ws.cell(row = ssrow, column = col).value = docData['title']
+    ws.cell(row = ssrow, column = col).font = font_url_style
+    ws.cell(row = ssrow, column = col).hyperlink = url_access(docData['handle'])
+    ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
+    col += 1   
+    
+    # Column 5: Doc Handle
+    ws.cell(row = ssrow, column = col).value = docData['handle']
+    ws.cell(row = ssrow, column = col).font = font_url_style
+    ws.cell(row = ssrow, column = col).hyperlink = url_view(docData['handle'])
+    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
+    col += 1  
+    
+    # Column 6: Ver Handle
+    ws.cell(row = ssrow, column = col).value = docData['Versions']['prefver']
+    ws.cell(row = ssrow, column = col).font = font_url_style
+    ws.cell(row = ssrow, column = col).hyperlink = url_view(docData['Versions']['prefver'])
+    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
+    col += 1   
+
+    # Column 7: Owner
+    ws.cell(row = ssrow, column = col).value = docData['owner-name']
+    ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
+    col += 1   
+
+    # Column 8: File Name
+    ws.cell(row = ssrow, column = col).value = docData['filename']
+    ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
+    col += 1   
+    
+    # Column 9: Date Modified
+    ws.cell(row = ssrow, column = col).value = docData['date']
+    ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
+
+# Global Variable ssrow
+ssrow = 2
+
+def xls_tree_iter(s,ws,tree,col):
+    global ssrow
+    # Write and format the headings in Excel
+    xls_tree_headings(ws)
+
+    collData = DCC.prop_get(s, col, InfoSet = 'Title')
+    branch = tree[col]
+    for doc in branch['documents']:
+        print(col,doc)
+        docData = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
+        docData['Versions'] = DCC.prop_get(s,doc,InfoSet = 'Versions',WriteProp = True)
+        xls_print_ssrow(ws, collData, docData, ssrow)
+        ssrow += 1
+    for newcol in branch['collections']:
+        xls_tree_iter(s,ws,tree,newcol)
+        
+def xls_tree(s,tree,col,fname):
+    # Open the spreadsheet
+    wb = openpyxl.Workbook()
+    ws = wb.worksheets[0]
+    
+    xls_tree_iter(s,ws,tree,col)
+    
+    wb.save(CF.reportfilepath + fname + '.xls')   
 
 def build_tree(s, keyname, target, tree, **kwargs):
     # kwargs options:
@@ -234,9 +358,14 @@ if __name__ == '__main__':
     
     load_flag = True
     
-    froot = 'Listing of IRIS'
-    coll = 'Collection-2463'
+#     froot = 'Listing of IRIS'
+#     coll = 'Collection-2463'
+
+    froot = 'Listing of STR CID'
+    coll = 'Collection-10669'
+#     coll = 'Collection-11377'
     tr = return_tree(s, coll, froot)
+    xls_tree(s,tr,coll,froot)
     html_tree(s,tr,froot)
     
 #     froot = 'Listing of STR CID'

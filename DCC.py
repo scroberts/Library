@@ -297,7 +297,7 @@ def prop_get(s, handle, **kwargs):
                 'Title': '<handle/>',
                 'User': '<entityowner/><handle/><parents/>',
                 'VerAll' : '<revision_comments/><title/><version_number/><parents/><handle/><entityowner/><getlastmodified/>',
-                'Versions' : '<versions/>'}
+                'Versions' : '<versions/><document_tree/>'}
 
     infoSet = kwargs.get('InfoSet','DocBasic')
     if debug: print('infoSet:',infoSet)
@@ -353,6 +353,8 @@ def prop_print(infoSet, fd):
         print_children(fd)
     elif infoSet == 'VerAll':
         print_ver(fd)
+    elif infoSet == 'Versions':
+        print_versions(fd)
     elif infoSet == 'CollData':
         print_coll_data(fd)
     elif infoSet == 'CollCont':     
@@ -382,6 +384,8 @@ def prop_scrape(dom, infoSet):
             fd.append([get_handle(par['handle']),par.displayname.text])
     elif infoSet == 'VerAll':
         fd = read_ver_data(dom)   
+    elif infoSet == 'Versions':
+        fd = read_versions(dom)   
     elif infoSet == 'CollData':
         fd = read_coll_data(dom)
     elif infoSet == 'CollCont':     
