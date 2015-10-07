@@ -173,8 +173,11 @@ def gen_ss_cid(s, dl):
         if 'Document-' in d:
             # CID link is to a document Handle
             doc = DCC.prop_get(s,d,InfoSet = 'DocBasic')
+            doc['Versions'] = DCC.prop_get(s,d,InfoSet = 'Versions')
             # Now read preferred version
-            prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll')
+            prefver = DCC.prop_get(s,doc['Versions']['prefver'],InfoSet = 'VerAll')
+            # Check how many places the document is located
+            doc['locations'] = DCC.prop_get(s,d,InfoSet = 'Parents')
             # Subject Document
             ssrow.append(doc['handle'])
             ssrow.append(doc['title'])
@@ -192,11 +195,14 @@ def gen_ss_cid(s, dl):
             ssrow.append(prefver['vercomment'])
             ssrow.append(prefver['owner-username'])
             ssrow.append(prefver['date'])            
-            DCC.print_doc_all(doc)
+            DCC.print_doc_basic(doc)
             DCC.print_ver(prefver)
+            DCC.print_locations(doc)
             print(doc['handle'], doc['title'], doc['tmtnum'], doc['owner-username'])
             print("Doc Ref")
             print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])
+            print('Document has %d locations' % len(doc['locations']))
+
         elif 'Version-' in d:
             # CID link is to a version handle
             ver = DCC.prop_get(s,d,InfoSet = 'VerAll')

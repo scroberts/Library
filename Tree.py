@@ -356,17 +356,17 @@ if __name__ == '__main__':
 # #     print_tree(s,tr)
 #     html_tree(s,tr,froot)
     
-    load_flag = True
+#     load_flag = True
     
 #     froot = 'Listing of IRIS'
 #     coll = 'Collection-2463'
 
-    froot = 'Listing of STR CID'
-    coll = 'Collection-10669'
+#     froot = 'Listing of STR CID'
+#     coll = 'Collection-10669'
 #     coll = 'Collection-11377'
-    tr = return_tree(s, coll, froot)
-    xls_tree(s,tr,coll,froot)
-    html_tree(s,tr,froot)
+#     tr = return_tree(s, coll, froot)
+#     xls_tree(s,tr,coll,froot)
+#     html_tree(s,tr,froot)
     
 #     froot = 'Listing of STR CID'
 #     coll = 'Collection-10668'
