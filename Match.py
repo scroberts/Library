@@ -56,10 +56,10 @@ def parse(p,dict):
 #     key, val = next(iter(p.items()))
     for key, val in p.items():
         if key == 'AND':
-#             print('AND Parsing: val = ', val)
+            if debug: print('AND Parsing: val = ', val)
             # expects a list of dicts
             for d in val:
-#                 print('AND Parsing: d = ', d)
+                if debug: print('AND Parsing: d = ', d)
                 if not parse(d, dict):
                     return(False)
             return(True)
@@ -85,7 +85,7 @@ def parse(p,dict):
             k = val['key']
             v = val['val']
             m = val['match']
-#             print('checking k, v',k,v)
+            if debug: print('checking k, v',k,v)
             return(in_dict(k, v, dict, Match = m))
         else:
             print('key = ', key)

@@ -357,7 +357,12 @@ if __name__ == '__main__':
 #     html_tree(s,tr,froot)
     
 #     load_flag = True
-    
+
+    froot = 'Listing of WFOS for Suijian'
+    coll = 'Collection-7798'
+    tr = return_tree(s, coll, froot)
+    html_tree(s,tr,froot)
+
 #     froot = 'Listing of IRIS'
 #     coll = 'Collection-2463'
 
