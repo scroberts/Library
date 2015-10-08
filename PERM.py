@@ -30,7 +30,6 @@ def check_perms(s, set, handle, treename, **kwargs):
     tr = Tree.return_tree(s, handle, treename)
     handles = Tree.get_flat_tree(tr)
     for handle in handles:
-    
         if 'Document-' in handle:
             fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic')
         elif 'Collection-' in handle:
@@ -38,7 +37,17 @@ def check_perms(s, set, handle, treename, **kwargs):
         else:
             fd = DCC.prop_get(s, handle, InfoSet = 'Title')    
         fd['permissions'] = DCC.prop_get(s, handle, InfoSet = 'Perms')
-        print(fd['handle'], ':', fd['title'])    
+#         print(fd['handle'], ':', fd['title'])    
+        
+        print('\n##############       ENTRY       ##############')
+        if 'Document-' in handle:
+            DCC.print_doc_basic(fd)
+        elif 'Collection-' in handle:
+            DCC.print_coll_data(fd)
+        else:
+            print('Not Document or Collection:', handle, ':', fd['title'])   
+        print('https://docushare.tmt.org/docushare/dsweb/ServicesLib/',handle,'/Permissions',sep='')
+        print()
     
         fix_objact(s, fd, handle, set, **kwargs)
         fix_permact(s, fd, handle, set, **kwargs)
@@ -188,14 +197,56 @@ def id_perm_changes(s, handle, fd, permdata, set):
         elif perm_act['Action']['Action'] == 'Message':
             for perm in permdata['perms']:
                 if Match.parse(perm_act['Criteria'], perm):
+                    print(perm_act['Action']['Message'])
                     DCC.print_perm(perm, LF = True)
-                    print('MESSAGE: ', perm_act['Action']['Message'])
         
     return([removelist, changelist, addlist])
 
 
 def fix_objact(s, fd, handle, set, **kwargs):
-    return
+    ask_flag = kwargs.get('Ask',True)
+    
+    if not check_fd_sel(fd, set):
+        return
+        
+    for obj_act in set['ObjAct']:
+        if Match.parse(obj_act['Criteria'], fd):
+            if obj_act['Action']['Action'] == 'SetOwner':
+                nu = DCC.prop_get(s, obj_act['Action']['Owner'], InfoSet = 'User')
+                print('??? Change Owner from [', fd['owner-userid'], ',', fd['owner-username'], '] to [', 
+                                        nu['owner-userid'], ',', nu['owner-username'], ']', sep = '', end = '') 
+                if ask_flag == False or MyUtil.get_yn(': (Y/N)? '):
+                    DCC.change_owner(s, handle, obj_act['Action']['Owner'])
+                    
+            elif obj_act['Action']['Action'] == 'AddKeyword':
+                print('??? Add Keyword "', obj_act['Action']['Keyword'], '" to "', fd['keywords'], '"', sep = '', end = '') 
+                if ask_flag == False or MyUtil.get_yn(': (Y/N)? '):
+                    kw = obj_act['Action']['Keyword'].strip(' ') + fd['keywords']
+                    DCC.set_metadata(s, handle, Keywords = kw)
+
+            elif obj_act['Action']['Action'] == 'DelKeyword':
+                print('??? Remove Keyword "', obj_act['Action']['Keyword'], '" from "', fd['keywords'], '"', sep = '', end = '') 
+                if ask_flag == False or MyUtil.get_yn(': (Y/N)? '):
+                    kw = fd['keywords'].strip(' ').replace(obj_act['Action']['Keyword'], '')
+                    DCC.set_metadata(s, handle, Keywords = kw)
+                
+            elif obj_act['Action']['Action'] == 'RepTitle':
+                print('??? Change Title to "', obj_act['Action']['Title'], '" from "', fd['title'], '"', sep = '', end = '') 
+                if ask_flag == False or MyUtil.get_yn(': (Y/N)? '):
+                    DCC.set_metadata(s, handle, Title = obj_act['Action']['Title'])
+
+            elif obj_act['Action']['Action'] == 'RepTmtNum':
+                print('??? Change TmtNum to "', obj_act['Action']['TmtNum'], '" from "', fd['tmtnum'], '"', sep = '', end = '') 
+                if ask_flag == False or MyUtil.get_yn(': (Y/N)? '):
+                    DCC.set_metadata(s, handle, Summary = obj_act['Action']['TmtNum'])
+                pass
+                
+            elif obj_act['Action']['Action'] == 'Message':
+                print(obj_act['Action']['Message'])
+                
+            else:
+                print('Error in PERM.fix_objact: ObjAct Action not recognized:', obj_act['Action']['Action'])
+            
 
 def fix_permact(s, fd, handle, set, **kwargs):
     # kwargs
@@ -205,14 +256,7 @@ def fix_permact(s, fd, handle, set, **kwargs):
     [removelist, changelist, addlist] = id_perm_changes(s,handle, fd, fd['permissions'], set) 
     ch_flag = False
     if len(removelist) or len(changelist) or len(addlist):
-        print('\n##############       ENTRY       ##############')
-        if 'Document-' in handle:
-            DCC.print_doc_basic(fd)
-        elif 'Collection-' in handle:
-            DCC.print_coll_data(fd)
-        else:
-            print('Not Document or Collection:', handle, ':', fd['title'])   
-        print('https://docushare.tmt.org/docushare/dsweb/ServicesLib/',handle,'/Permissions',sep='')
+
         DCC.print_perms(fd['permissions'])    
         print('\nSuggested Changes...')
         print_perm_changes(removelist, changelist, addlist)

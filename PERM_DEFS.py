@@ -20,6 +20,8 @@ debug = False
 #                                   'RepTitle' : Replace the document title
 #                                   'RepTmtNum' : Replace the tmt number
 #                                   'Message' : Print a message
+# PermSel : dictionary contrining permissions criteria to decide if PermAct will be considered
+#   Criteria : permissions criteria list (all items must be True in order to pass)
 # PermAct : dictionary containing permissions criteria and actions
 #   Criteria : permission change criteria. If met changes will be made to permissions
 #   Action : permission change actions
@@ -329,13 +331,43 @@ SET_EMPTY = {
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermAct'   : [ ]} 
                     
-criteria = dic_handle_in('User-')
-action = {'Action' : 'Message', 'Message' : 'Contains user permissions'}
-if_user_print_message = dict_crit_act(criteria,action)
 
+if_user_print_message = dict_crit_act(
+                dic_handle_in('User-'),
+                {'Action' : 'Message', 'Message' : '*** Permissions Match Criteria'})
+
+if_owner_roberts_change_rogers = dict_crit_act(
+                chk_dict('owner-userid','User-513','eq'),
+                {'Action' : 'SetOwner', 'Owner' : 'User-50'})
+                
+add_published_keyword = dict_crit_act(
+                {'NOT' : chk_dict('keywords','TMTPublished','in')},
+                {'Action' : 'AddKeyword', 'Keyword' : 'TMTPublished '})
+                
+remove_published_keyword = dict_crit_act(
+                chk_dict('keywords','TMTPublished','in'),
+                {'Action' : 'DelKeyword', 'Keyword' : 'TMTPublished'})
+                
+replace_title = dict_crit_act(
+                chk_dict('keywords','TMTPublished','in'),
+                {'Action' : 'RepTitle', 'Title' : 'test form Published'})
+                
+replace_tmtnum = dict_crit_act(
+                chk_dict('keywords','TMTPublished','in'),
+                {'Action' : 'RepTmtNum', 'TmtNum' : 'TMT.SEN.COR.14.001.DRF02'})
+                
+tmtnum_message = dict_crit_act(
+                chk_dict('tmtnum','DRF','in'),
+                {'Action' : 'Message', 'Message' : '>>> This is a Draft Document'})
+                
 SET_TEST = {
         'ObjSel'    : { 'Criteria' : docORcol},
-        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'ObjAct'    : [ if_owner_roberts_change_rogers,
+                        add_published_keyword,
+                        remove_published_keyword,
+                        replace_title,
+                        replace_tmtnum,
+                        tmtnum_message],
         'PermAct'   : [if_user_print_message]} 
 
 SET_REMOVE_INACTIVE = {

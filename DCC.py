@@ -206,6 +206,7 @@ def login(url='',**kwargs):
             print('Login: site kwarg not understood: ',site)
             sys.exit(1)
     else:
+        DCC_URL = url.replace('/dsweb/Login','')
         if debug: print('Login: Url supplied as :', url)
     
     print('URL for Docushare is: ',url)
