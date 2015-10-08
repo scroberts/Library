@@ -255,7 +255,6 @@ def prop_get(s, handle, **kwargs):
                 'DocBasic':'<author/><handle/><document/><getlastmodified/><size/><summary/><entityowner/><keywords/>',
                 'DocDate': '<getlastmodified/>',
                 'Group': '<entityowner/><handle/><parents/><children/>',
-                'Locations': '<parents/>',
                 'Parents': '<parents/>',
                 'Perms': '<private/><acl/>',
                 'Summary' : '<summary/>',

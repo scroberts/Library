@@ -10,12 +10,24 @@ debug = False
 # Data structure definition:
 # ObjSel : will the criteria and actions be applied to this object?
 #   Criteria : Object Selection Criteria
+#           
 # ObjAct : dictionary containing object criteria and actions
 #   Criteria : object change criteria. If met changes will be made to objects
 #   Action : object change actions
+#           Defined actions are:    'SetOwner' : set new owner
+#                                   'AddKeyword' : Append a string to keywords
+#                                   'DelKeyword' : Remove string from keywords
+#                                   'RepTitle' : Replace the document title
+#                                   'RepTmtNum' : Replace the tmt number
+#                                   'Message' : Print a message
 # PermAct : dictionary containing permissions criteria and actions
 #   Criteria : permission change criteria. If met changes will be made to permissions
 #   Action : permission change actions
+#           Defined Actions are: 'Add','Change','Remove', or 'Message'
+#               'Add' requires 'Handle' and 'Perms' to be defined
+#               'Change' requires 'Perms' to be defined
+#               'Remove' down no require additional arguments
+#               'Message' requires 'Message' to be defined
 # 
 # crit_act_set = {'obj_sel' : parse_dict, 
 #             'obj' : [ list of dicts of {'obj_crit' : parse_dict, 'obj_act' : obj_act_dict}, {...} ]
@@ -31,18 +43,18 @@ CHANGE_RW = {'Action' : 'Change', 'Perms' : PERM_RW}
 CHANGE_RWM = {'Action' : 'Change', 'Perms' : PERM_RWM}
 
 # Defs for Basic dictionary functionality
-def def_perm(k,v,m): return({'InDict' : {'key' : k, 'val' : v, 'match' : m}})
-def dic_handle_eq(hdl): return(def_perm('handle',hdl,'eq'))
-def dic_handle_in(hdl): return(def_perm('handle',hdl,'in'))
+def chk_dict(k,v,m): return({'InDict' : {'key' : k, 'val' : v, 'match' : m}})
+def dic_handle_eq(hdl): return(chk_dict('handle',hdl,'eq'))
+def dic_handle_in(hdl): return(chk_dict('handle',hdl,'in'))
 def dic_handle_not_eq(hdl): return({'NOT' : dic_handle_eq(hdl)})
 def dic_handle_not_in(hdl): return({'NOT' : dic_handle_in(hdl)})
 
 # Individual user perm defs (both Criteria and Action)
-def make_permact(criteria, action): return({'Criteria' : criteria, 'Action' : action})
-def remove_user(user): return(make_permact(dic_handle_eq(user), REMOVE))
+def dict_crit_act(criteria, action): return({'Criteria' : criteria, 'Action' : action})
+def remove_user(user): return(dict_crit_act(dic_handle_eq(user), REMOVE))
 def add_user(user,perms): return({  'Action': {'Action' : 'Add', 'Handle' : user, 'Perms' : perms},
                                     'Criteria': {'NOT' : dic_handle_eq(user)}})
-def remove_user_ifperms(user, perms): return(make_permact({'AND' : [perms, dic_handle_eq(user)]}, REMOVE))
+def remove_user_ifperms(user, perms): return(dict_crit_act({'AND' : [perms, dic_handle_eq(user)]}, REMOVE))
 
 # Defs used with Criteria dictionary field
 def check_user_perms(user, perms): return({'AND' : [dic_handle_eq(user), perms]})
@@ -59,9 +71,9 @@ doc_handle = dic_handle_in('Document-')
 col_handle = dic_handle_in('Collection-')
 docORcol = {'OR' : [doc_handle, col_handle]}
 
-read_true = def_perm('Read', True, 'eq')
-write_true = def_perm('Write', True, 'eq')
-manage_true = def_perm('Manage', True, 'eq')
+read_true = chk_dict('Read', True, 'eq')
+write_true = chk_dict('Write', True, 'eq')
+manage_true = chk_dict('Manage', True, 'eq')
 RWM_true = {'AND' : [read_true, write_true, manage_true]}
 RW_true = {'AND' : [read_true, write_true]}
 
@@ -79,16 +91,16 @@ perm_write_only = {'AND' : [read_false, write_true, manage_false]}
 perm_W_or_M_no_R = {'AND' : [read_false, {'OR' : [write_true, manage_true]}]}
 user_manage_false = {'AND' : [user_handle, manage_false]}
 
-SE_doc = def_perm('tmtnum', '.SEN.', 'in')
-STR_doc = def_perm('tmtnum', '.STR.', 'in')
-CTR_doc = def_perm('tmtnum', '.CTR.', 'in')
-OPT_doc = def_perm('tmtnum', '.OPT.', 'in')
-TEL_doc = def_perm('tmtnum', '.TEL.', 'in')
+SE_doc = chk_dict('tmtnum', '.SEN.', 'in')
+STR_doc = chk_dict('tmtnum', '.STR.', 'in')
+CTR_doc = chk_dict('tmtnum', '.CTR.', 'in')
+OPT_doc = chk_dict('tmtnum', '.OPT.', 'in')
+TEL_doc = chk_dict('tmtnum', '.TEL.', 'in')
 
-inactive_user = def_perm('name','INACTIVE','in')
-remove_inactive = make_permact(inactive_user, REMOVE)
+inactive_user = chk_dict('name','INACTIVE','in')
+remove_inactive = dict_crit_act(inactive_user, REMOVE)
 
-remove_perm_none = make_permact(perm_none,REMOVE)
+remove_perm_none = dict_crit_act(perm_none,REMOVE)
 
 # Groups
 grp_all_users = 'Group-4'
@@ -167,9 +179,7 @@ grp_EAR_perm = {'OR' :  [dic_handle_eq(grp_EAR_JPN_IRIS),
                     dic_handle_eq(grp_EAR_IN_BOARD),
                     dic_handle_eq(grp_EAR_JP_BOARD)]}
                     
-
-
-INS_doc = def_perm('tmtnum', '.INS.', 'in')
+INS_doc = chk_dict('tmtnum', '.INS.', 'in')
 
 TELDEPT_doc = {'OR' : [STR_doc, CTR_doc, OPT_doc, TEL_doc]}
 
@@ -193,42 +203,56 @@ obj_actions_dict = {}
 
 # PermAct definitions
 # Remove any read_only users (they should be in groups)
-PERMACT_REMOVE_ro_users = make_permact(user_read_only, REMOVE)
+PERMACT_REMOVE_ro_users = dict_crit_act(user_read_only, REMOVE)
 
 # Remove read_only groups (except SE readership all)
 
-PERMACT_REMOVE_ro_groups_except_IRIS_SEread = make_permact({'AND' : [group_read_only, no_se_readership, no_IRIS_team]}, REMOVE)
+PERMACT_REMOVE_ro_groups_except_IRIS_SEread = dict_crit_act({'AND' : [group_read_only, no_se_readership, no_IRIS_team]}, REMOVE)
 
 # Remove group or user with no Read, but Write and/or Manage
-PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R = make_permact(perm_W_or_M_no_R, REMOVE)
+PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R = dict_crit_act(perm_W_or_M_no_R, REMOVE)
 
-PERMACT_REMOVE_grp_usr_perm_none = make_permact(perm_none, REMOVE)
+PERMACT_REMOVE_grp_usr_perm_none = dict_crit_act(perm_none, REMOVE)
 
 # Change permissions to add Read in cases where there is Write Only
-PERMACT_CHANGE_W_to_RW = make_permact(perm_write_only, CHANGE_RW)
+PERMACT_CHANGE_W_to_RW = dict_crit_act(perm_write_only, CHANGE_RW)
 
 # Add SE readership all if not already there
-PERMACT_ADD_se_readership = make_permact(no_se_readership, add_R_grp_se_readership)
+
+PERMACT_ADD_se_readership = dict_crit_act(no_se_readership, add_R_grp_se_readership)
 
 # Add STR Managers all if not already there
-PERMACT_ADD_str_managers = make_permact(no_str_managers, add_RWM_grp_str_managers)
+PERMACT_ADD_str_managers = dict_crit_act(no_str_managers, add_RWM_grp_str_managers)
 
 # Change SE readership no read or write/manage to read only
 se_readership_noRead_or_WM = {'AND' : [dic_handle_eq(grp_SE_readership), {'OR' : [read_false, write_true, manage_true]}]}
-PERMACT_CHANGE_se_readership_RO = make_permact(se_readership_noRead_or_WM, CHANGE_R)
+PERMACT_CHANGE_se_readership_RO = dict_crit_act(se_readership_noRead_or_WM, CHANGE_R)
 
-PERMACT_REMOVE_dumas_ro = make_permact({'AND' : [user_read_only, dic_handle_eq(usr_christophe)]}, REMOVE)
-PERMACT_REMOVE_mathias_manage_false = make_permact({'AND' : [manage_false, dic_handle_eq(usr_matthias)]}, REMOVE)
-# PERMACT_REMOVE_szeto = make_permact(dic_handle_eq(usr_szeto), REMOVE)
+PERMACT_REMOVE_dumas_ro = dict_crit_act({'AND' : [user_read_only, dic_handle_eq(usr_christophe)]}, REMOVE)
+PERMACT_REMOVE_mathias_manage_false = dict_crit_act({'AND' : [manage_false, dic_handle_eq(usr_matthias)]}, REMOVE)
+# PERMACT_REMOVE_szeto = dict_crit_act(dic_handle_eq(usr_szeto), REMOVE)
 PERMACT_REMOVE_szeto = remove_user(usr_szeto)
 
 usr_str_managers = {'OR' : [dic_handle_eq(usr_chylek), dic_handle_eq(usr_amir), dic_handle_eq(usr_kyle)]}
 
-PERMACT_REMOVE_ro_groups_except_se_reader = make_permact({'AND' : [group_read_only, no_se_readership]}, REMOVE)
+PERMACT_REMOVE_ro_groups_except_se_reader = dict_crit_act({'AND' : [group_read_only, no_se_readership]}, REMOVE)
 
 SET_SE_READERSHIP = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [ PERMACT_ADD_se_readership,
+                        PERMACT_CHANGE_se_readership_RO,
+                        PERMACT_REMOVE_ro_users,
+                        PERMACT_REMOVE_ro_groups_except_se_reader,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        PERMACT_REMOVE_grp_usr_perm_none,
+                        remove_inactive,
+                        remove_user(grp_all_noEAR)]} 
+                        
+SET_LGSF = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermSel'   : { 'Criteria' : [check_user_perms(grp_all_noEAR,read_true)]},
         'PermAct'   : [ PERMACT_ADD_se_readership,
                         PERMACT_CHANGE_se_readership_RO,
                         PERMACT_REMOVE_ro_users,
@@ -242,7 +266,7 @@ grp_NRCTC_ext = 'Group-644'
 grp_NRCTC_obs = 'Group-647'
 grp_NFIRAOS_team = 'Group-128'
 
-PERMACT_REMOVE_ro_groups_NRTC = make_permact({'AND' : [ group_read_only, 
+PERMACT_REMOVE_ro_groups_NRTC = dict_crit_act({'AND' : [ group_read_only, 
                                                         excl_crit_user(grp_SE_readership),  
                                                         excl_crit_user(grp_NRCTC_ext),
                                                         excl_crit_user(grp_NRCTC_obs), 
@@ -300,6 +324,20 @@ SET_CRYO = {
                         PERMACT_REMOVE_grp_usr_perm_none,
                         remove_user(grp_all_noEAR)]} 
                         
+SET_EMPTY = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [ ]} 
+                    
+criteria = dic_handle_in('User-')
+action = {'Action' : 'Message', 'Message' : 'Contains user permissions'}
+if_user_print_message = dict_crit_act(criteria,action)
+
+SET_TEST = {
+        'ObjSel'    : { 'Criteria' : docORcol},
+        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'PermAct'   : [if_user_print_message]} 
+
 SET_REMOVE_INACTIVE = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
@@ -337,7 +375,7 @@ SET_IRIS_REMOVE_ISBRUCKER = {
         'PermAct'   : [remove_user(grp_Isbrucker)]} 
 
 
-Astrometry = {'OR' : [def_perm('title','astrometry','in'), def_perm('title','Astrometry','in')]}
+Astrometry = {'OR' : [chk_dict('title','astrometry','in'), chk_dict('title','Astrometry','in')]}
 grp_IRIS_READ = {'AND' : [dic_handle_eq(grp_IRIS_team), read_true]}
 
 SET_IRIS_REMOVE_MATTHIAS = {
@@ -384,10 +422,9 @@ SET_REMOVE_STR_MANAGERS = {
 
 grp_noEAR_READ = {'AND' : [dic_handle_eq(grp_all_noEAR), read_true]}
  
-                        
 # Change IRIS Team read only or RWM to RW
 IRIS_team_NotRW = {'AND' : [dic_handle_eq(grp_IRIS_team), {'OR' : [read_false, write_false, manage_true]}]}
-PERMACT_CHANGE_IRIS_team = make_permact(IRIS_team_NotRW, CHANGE_RW)
+PERMACT_CHANGE_IRIS_team = dict_crit_act(IRIS_team_NotRW, CHANGE_RW)
 
 SET_REPLACE_IRIS_EAR_WITH_ALL = {
         'ObjSel'    : {'Criteria' : docORcol},
@@ -413,3 +450,14 @@ SET_IRIS_TEAM = {
         'ObjAct'    : {'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermSel'   : {'Criteria' : [check_user_perms(grp_IRIS_team,RW_true)]},
         'PermAct'   : []}
+        
+if __name__ == '__main__':
+    print("Running module test code for",__file__)
+
+    print(PERMACT_ADD_se_readership)
+    
+    print(PERMACT_REMOVE_ro_users)
+    
+    print(PERMACT_CHANGE_se_readership_RO)
+    
+    
