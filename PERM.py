@@ -21,14 +21,12 @@ def get_group_handles(s,grp):
         chandles.append(c[0])
     return(chandles)
 
-def check_perms(s, set, handle, treename, **kwargs):
+def check_perms(s, set, handles, **kwargs):
     ask_flag = kwargs.get('Ask', True)
     if not ask_flag:
         if not MyUtil.get_yn('!!! Warning !!! ask = False: Will not ask to make changes, okay? Enter N to Exit, Y to Continue:'):
             print('exiting...')
             sys.exit(0)
-    tr = Tree.return_tree(s, handle, treename)
-    handles = Tree.get_flat_tree(tr)
     for handle in handles:
         if 'Document-' in handle:
             fd = DCC.prop_get(s, handle, InfoSet = 'DocBasic')
@@ -39,14 +37,18 @@ def check_perms(s, set, handle, treename, **kwargs):
         fd['permissions'] = DCC.prop_get(s, handle, InfoSet = 'Perms')
 #         print(fd['handle'], ':', fd['title'])    
         
-        print('\n##############       ENTRY       ##############')
+        print('\n>>>>>>>>>>>>>>       DCC Information       <<<<<<<<<<<<<<')
         if 'Document-' in handle:
             DCC.print_doc_basic(fd)
         elif 'Collection-' in handle:
             DCC.print_coll_data(fd)
         else:
             print('Not Document or Collection:', handle, ':', fd['title'])   
-        print('https://docushare.tmt.org/docushare/dsweb/ServicesLib/',handle,'/Permissions',sep='')
+        print('\n\tDoc Properties URL: ',Tree.url_view(handle))
+        print('\tPermissions URL: ',Tree.url_perm(handle))
+        print('\tGet Document URL: ',Tree.url_access(handle))
+
+        
         print()
     
         fix_objact(s, fd, handle, set, **kwargs)
@@ -159,9 +161,12 @@ def id_perm_changes(s, handle, fd, permdata, set):
        
     if not check_fd_sel(fd, set) or not check_perm_sel(permdata, set):
         return([removelist,changelist,addlist])
-        
+    
     for perm_act in set['PermAct']:
-        if perm_act['Action']['Action'] == 'Remove':
+        # pass if no action is defined
+        if not perm_act['Action']:
+            pass
+        elif perm_act['Action']['Action'] == 'Remove':
             for perm in permdata['perms']:
                 if Match.parse(perm_act['Criteria'], perm):
                     removelist.append(perm)
@@ -210,6 +215,9 @@ def fix_objact(s, fd, handle, set, **kwargs):
         return
         
     for obj_act in set['ObjAct']:
+        if not obj_act['Action']:
+            pass
+
         if Match.parse(obj_act['Criteria'], fd):
             if obj_act['Action']['Action'] == 'SetOwner':
                 nu = DCC.prop_get(s, obj_act['Action']['Owner'], InfoSet = 'User')
@@ -219,9 +227,9 @@ def fix_objact(s, fd, handle, set, **kwargs):
                     DCC.change_owner(s, handle, obj_act['Action']['Owner'])
                     
             elif obj_act['Action']['Action'] == 'AddKeyword':
-                print('??? Add Keyword "', obj_act['Action']['Keyword'], '" to "', fd['keywords'], '"', sep = '', end = '') 
+                print('??? Add Keyword "', obj_act['Action']['Keyword'], '" to "', fd['keywords'].strip(), '"', sep = '', end = '') 
                 if ask_flag == False or MyUtil.get_yn(': (Y/N)? '):
-                    kw = obj_act['Action']['Keyword'].strip(' ') + fd['keywords']
+                    kw = obj_act['Action']['Keyword'] + fd['keywords'].strip(' ')
                     DCC.set_metadata(s, handle, Keywords = kw)
 
             elif obj_act['Action']['Action'] == 'DelKeyword':

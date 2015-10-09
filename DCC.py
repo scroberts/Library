@@ -401,18 +401,18 @@ def prop_scrape(dom, infoSet):
     return(fd) 
     
 def print_children(fd):
-    print("\nChildren...")
+    print("\n\tChildren...")
     for c in fd:
-        print("  [",c[0],"], \"", c[1], "\"", sep = "")
+        print("\t  [",c[0],"], \"", c[1], "\"", sep = "")
 
 def print_coll_data(fd):
     # used for Depth = '0'
-    print("\n*** Collection Handle", fd['handle'], "***\n")
-    print("Title: ", fd['title'])
-    print("Summary: ", fd['summary'])
-    print("Keywords: ", fd['keywords'])
-    print("Modified Date: ", fd['date'])
-    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("\n\t*** Collection Handle", fd['handle'], "***\n")
+    print("\tTitle: ", fd['title'])
+    print("\tSummary: ", fd['summary'])
+    print("\tKeywords: ", fd['keywords'])
+    print("\tModified Date: ", fd['date'])
+    print("\tOwner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
       
 def print_coll_cont(clist):
 # Used for depth of '1' or 'infinity'
@@ -420,37 +420,37 @@ def print_coll_cont(clist):
     idx = 0
     for c in clist:
         if idx == 0:
-            print("\nListing of: ",sep = "",end="")
+            print("\n\tListing of: ",sep = "",end="")
             print_coll_cont_entry('',c)
-            print("\nContents:")
+            print("\n\tContents:")
         else: 
-            print("  ",'%2d' % idx, ": ", sep="", end="")
+            print("\t  ",'%2d' % idx, ": ", sep="", end="")
             print_coll_cont_entry('    ',c)
             print("")
         idx += 1
        
 def print_coll_cont_entry(indent,c):
-    print("\n [", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
-    print(indent,"Summary: ", c['summary'], sep = "")
-    print(indent,"Last Modified: ", c['date'], sep = "")
-    print(indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
+    print("\t",indent,"[", c['name'][1], "], \"", c['name'][0], "\"", sep = "")
+    print('\t\t',indent,"Summary: ", c['summary'], sep = "")
+    print('\t\t',indent,"Last Modified: ", c['date'], sep = "")
+    print('\t\t',indent,"Owner: [", c['owner'][2], "], [", c['owner'][1], "], \"", c['owner'][0], "\"", sep = "")
     
 def print_group(fd):
-    print("\nHandle: ", fd['handle'])
-    print("Name: ", fd['title'])
-    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("\n\tHandle: ", fd['handle'])
+    print("\tName: ", fd['title'])
+    print("\tOwner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
     print_parents(fd['parents'])
     print_children(fd['children'])
 
 def print_doc_basic(fd):    
-    print("\nDCC Title: ", fd['title'])
-    print("TMT Document Number: ", fd['tmtnum'])
-    print("DCC Document Handle/FileName: ", fd['handle'],", \"",fd['filename'],"\"",sep="")
-    print("DCC Date: ", fd['date'])
-    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
-    print("Author: ", fd['author'], sep="")
-    print("Keywords: ", " \"", fd['keywords'], "\"", sep="")
-    print("Size: ", fd['size'])
+    print("\n\tDCC Title: ", fd['title'])
+    print("\tTMT Document Number: ", fd['tmtnum'])
+    print("\tDCC Document Handle/FileName: ", fd['handle'],", \"",fd['filename'],"\"",sep="")
+    print("\tDCC Date: ", fd['date'])
+    print("\tOwner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("\tAuthor: ", fd['author'], sep="")
+    print("\tKeywords: ", " \"", fd['keywords'], "\"", sep="")
+    print("\tSize: ", fd['size'])
     
 def print_doc_all(fd):
     print("\n** Document Entry", fd['handle'], "***\n")
@@ -472,23 +472,23 @@ def print_doc_all(fd):
     print("\n*** End Document Entry", fd['handle'], "***\n")
     
 def print_locations(fd):
-    print("\nLocations...")
+    print("\n\tLocations...")
     for loc in sorted(fd['locations'], key = lambda x: x[0]):
-        print(loc[0],", \"",loc[1],"\"", sep="")
+        print('\t',loc[0],", \"",loc[1],"\"", sep="")
 
 def print_versions(fd):
-    print("\nVersions...")
+    print("\n\tVersions...")
     for ver in sorted(fd["versions"], key = lambda x: x[2], reverse = True ):
-        print("Version:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
+        print("\tVersion:", ver[2], ", [", ver[0], "], [",ver[3], "], \"", ver[1], "\"", sep="")
 
 
 def print_parents(fd):   
-    print("\nParents...")
+    print("\n\tParents...")
     for p in fd:
-        print("  [",p[0],"], \"", p[1], "\"", sep = "") 
+        print("\t  [",p[0],"], \"", p[1], "\"", sep = "") 
               
 def print_perm(perm, **kwargs):
-    print("[",perm["handle"],"]:\t","perms = ",sep="",end="")
+    print("\t[",perm["handle"],"]:\t","perms = ",sep="",end="")
     if "Search" in perm.keys():
         print("[Search]", end="")
     if "Read" in perm.keys():
@@ -502,31 +502,31 @@ def print_perm(perm, **kwargs):
         print('')
 
 def print_perms(permlist):
-    print("\nPermissions...")
+    print("\n\tPermissions...")
     for perm in sorted(permlist['perms'], key = lambda x: x["handle"]):
         print_perm(perm)
         print("")    
-    print('Private: ', permlist['private'])
+    print('\tPrivate: ', permlist['private'])
         
 def print_title(fd):
-    print("\nHandle: ", fd['handle'])
-    print("Name: ", fd['title'])
+    print("\n\tHandle: ", fd['handle'])
+    print("\tName: ", fd['title'])
     
 def print_user(fd):
-    print("\nHandle: ", fd['handle'])
-    print("Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("\n\tHandle: ", fd['handle'])
+    print("\tOwner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
     print_parents(fd['parents'])
 
 def print_ver(fd):
-    print("\n*** Version Entry", fd['dccver'], "***\n")
-    print("Version: ", fd['dccver'])
-    print("Version Number: ",fd['dccvernum'])
-    print("Version Comment: ", fd['vercomment'])
-    print("Version Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
-    print("Last Modified: ", fd['date'])
-    print("\nParent DCC Document Number: ", get_handle(fd['dccdoc']))
-    print("Parent Document Title:", "\"", fd['dcctitle'], "\"", sep = "")
-    print("\n*** End Version Entry", fd['dccver'], "***\n")
+    print("\n\t*** Version Entry", fd['dccver'], "***\n")
+    print("\tVersion: ", fd['dccver'])
+    print("\tVersion Number: ",fd['dccvernum'])
+    print("\tVersion Comment: ", fd['vercomment'])
+    print("\tVersion Owner: ", fd['owner-name'],":[",fd['owner-userid'],",",fd['owner-username'],"]", sep="")
+    print("\tLast Modified: ", fd['date'])
+    print("\n\tParent DCC Document Number: ", get_handle(fd['dccdoc']))
+    print("\tParent Document Title:", "\"", fd['dcctitle'], "\"", sep = "")
+    print("\n\t*** End Version Entry", fd['dccver'], "***\n")
 
 def read_coll_cont(dom):
 # Used for depth of '1' or 'infinity'
@@ -838,30 +838,30 @@ def test_props():
     
     start = time.time()
 
-    print('Call 2 DocBasic')
+    print('\nCall 2 DocBasic')
     fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
 
-    print('Call 3 CollData')
+    print('\nCall 3 CollData')
     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
  
-    print('Call 4 CollCont Depth = 1')
+    print('\nCall 4 CollCont Depth = 1')
     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = '1', WriteProp = True, Print = True)
 
-    print('Call 5 CollCont Depth = infinity')
+    print('\nCall 5 CollCont Depth = infinity')
     fd = prop_get(s, collhandle, InfoSet = 'CollCont', Depth = 'infinity', WriteProp = True, Print = True)
  
-    print('Call 6 Parents')
+    print('\nCall 6 Parents')
     fd = prop_get(s, collhandle, InfoSet = 'Parents', WriteProp = True, Print = True)
 
-    print('Call 7 Children')
+    print('\nCall 7 Children')
     fd = prop_get(s, collhandle, InfoSet = 'Children', Depth = 'infinity', WriteProp = True, Print = True)
     
-    print('Call 8 CollData, Perms, Children')
+    print('\nCall 8 CollData, Perms, Children')
     fd = prop_get(s, collhandle, InfoSet = 'CollData', WriteProp = True, Print = True)
     fd['permissions'] = prop_get(s, collhandle, InfoSet = 'Perms', WriteProp = True, Print = True)
     fd['children'] = prop_get(s, collhandle, InfoSet = 'Children', WriteProp = True, Print = True)
 
-    print('Call 9 DocData, Perms, Children')
+    print('\nCall 9 DocData, Perms, Children')
     fd = prop_get(s, dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
     fd['permissions'] = prop_get(s, dochandle, InfoSet = 'Perms', WriteProp = True, Print = True)    
     

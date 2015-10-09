@@ -20,7 +20,7 @@ debug = False
 #                                   'RepTitle' : Replace the document title
 #                                   'RepTmtNum' : Replace the tmt number
 #                                   'Message' : Print a message
-# PermSel : dictionary contrining permissions criteria to decide if PermAct will be considered
+# PermSel : dictionary containing permissions criteria to decide if PermAct will be considered
 #   Criteria : permissions criteria list (all items must be True in order to pass)
 # PermAct : dictionary containing permissions criteria and actions
 #   Criteria : permission change criteria. If met changes will be made to permissions
@@ -46,6 +46,7 @@ CHANGE_RWM = {'Action' : 'Change', 'Perms' : PERM_RWM}
 
 # Defs for Basic dictionary functionality
 def chk_dict(k,v,m): return({'InDict' : {'key' : k, 'val' : v, 'match' : m}})
+def chk_list(v,l,m): return({'InList' : {'val' : v, 'list' : l, 'match' : m}})
 def dic_handle_eq(hdl): return(chk_dict('handle',hdl,'eq'))
 def dic_handle_in(hdl): return(chk_dict('handle',hdl,'in'))
 def dic_handle_not_eq(hdl): return({'NOT' : dic_handle_eq(hdl)})
@@ -289,7 +290,7 @@ SET_PERM_NRTCPDR = {
 
 SET_REMOVE_RO_IF_SE_READERSHIP = {
         'ObjSel'    : { 'Criteria' : docORcol},
-        'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
+        'ObjAct'    : [{'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict}],
         'PermSel'   : { 'Criteria' : [check_user_perms(grp_SE_readership,read_true)]},
         'PermAct'   : [ PERMACT_CHANGE_se_readership_RO,
                         PERMACT_REMOVE_ro_users,
@@ -331,7 +332,6 @@ SET_EMPTY = {
         'ObjAct'    : { 'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermAct'   : [ ]} 
                     
-
 if_user_print_message = dict_crit_act(
                 dic_handle_in('User-'),
                 {'Action' : 'Message', 'Message' : '*** Permissions Match Criteria'})
@@ -343,6 +343,10 @@ if_owner_roberts_change_rogers = dict_crit_act(
 add_published_keyword = dict_crit_act(
                 {'NOT' : chk_dict('keywords','TMTPublished','in')},
                 {'Action' : 'AddKeyword', 'Keyword' : 'TMTPublished '})
+                
+chk_published_keyword = dict_crit_act(
+                chk_dict('keywords','TMTPublished','in'),
+                {'Action' : 'Message', 'Message' : '*** TMTPublished keyword exists'})
                 
 remove_published_keyword = dict_crit_act(
                 chk_dict('keywords','TMTPublished','in'),
@@ -359,7 +363,8 @@ replace_tmtnum = dict_crit_act(
 tmtnum_message = dict_crit_act(
                 chk_dict('tmtnum','DRF','in'),
                 {'Action' : 'Message', 'Message' : '>>> This is a Draft Document'})
-                
+
+    
 SET_TEST = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : [ if_owner_roberts_change_rogers,
@@ -369,6 +374,7 @@ SET_TEST = {
                         replace_tmtnum,
                         tmtnum_message],
         'PermAct'   : [if_user_print_message]} 
+        
 
 SET_REMOVE_INACTIVE = {
         'ObjSel'    : { 'Criteria' : docORcol},
@@ -482,14 +488,54 @@ SET_IRIS_TEAM = {
         'ObjAct'    : {'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict},
         'PermSel'   : {'Criteria' : [check_user_perms(grp_IRIS_team,RW_true)]},
         'PermAct'   : []}
+
+# add_altec_ifnoSEread = dict_crit_act(dic_handle_not_eq(grp_SE_readership),{'Action': {'Action' : 'Add', 'Handle' : 'Group-679', 'Perms' : {'Read' : True}}})
+
+
+# add_altec_ifnoSEread = dict_crit_act({'NOT':check_user_perms(grp_SE_readership,read_true)},{'Action': {'Action' : 'Add', 'Handle' : 'Group-679', 'Perms' : {'Read' : True}}})
+
+no_se_readership_read = {'NOT' : {'AND' : [dic_handle_eq( grp_SE_readership), read_true ]}}
+# no_se_readership_read = {'AND' : [dic_handle_eq( grp_SE_readership), read_true ]}
+
+add_R_grp_altec = {'Action' : 'Add', 'Handle' : 'Group-679', 'Perms' : {'Read' : True}}
+PERMACT_ADD_altec = dict_crit_act(no_se_readership_read, add_R_grp_altec)
+# PERMACT_ADD_altec
+
+SET_ENC_CONSTRUCTION = {
+                    'ObjSel'    : { 'Criteria' : docORcol},
+                    'ObjAct'    : [{'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict}],
+                    'PermSel'   : {'Criteria' : [{'AND':[dic_handle_eq('Group-507'), read_true]}, no_se_readership_read]},
+                    'PermAct'   : [ add_user('Group-679', {'Read' : True}),
+                                    PERMACT_REMOVE_grp_usr_perm_none,
+                                    remove_inactive]}
+     
+# SET_ENC_CONSTRUCTION = {
+#                     'ObjSel'    : { 'Criteria' : docORcol},
+#                     'ObjAct'    : [{'Criteria' : obj_criteria_dict, 'Action' : obj_actions_dict}],
+#                     'PermSel'   : {'Criteria' : [{'AND' : [dic_handle_eq('Group-507'), read_true]},
+#                                         {'NOT': check_user_perms(grp_SE_readership,read_true)}]},
+#                     'PermAct'   : [ add_user('Group-679',{'Read' : True}),
+#                                     PERMACT_REMOVE_grp_usr_perm_none,
+#                                     remove_inactive]}
+
         
 if __name__ == '__main__':
-    print("Running module test code for",__file__)
+#     print("Running module test code for",__file__)
+# 
+#     print(PERMACT_ADD_se_readership)
+#     
+#     print(PERMACT_REMOVE_ro_users)
+#     
+#     print(PERMACT_CHANGE_se_readership_RO)
+#     print(dic_handle_eq('Group-507'))
+#     
+#     print(read_true)
+    
+#     print({'AND' : [dic_handle_eq('Group-507'), read_true]})
+#     print(check_user_perms(grp_SE_readership,read_true))
+#     print(add_user('Group-679',{'Read' : True}))
+    
+    print({'Criteria' : [{'AND':[dic_handle_eq('Group-507'), read_true]}, no_se_readership_read]})
+    
 
-    print(PERMACT_ADD_se_readership)
-    
-    print(PERMACT_REMOVE_ro_users)
-    
-    print(PERMACT_CHANGE_se_readership_RO)
-    
     

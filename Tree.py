@@ -23,15 +23,18 @@ align_hv_cen_wrap_style = Alignment(horizontal = 'center', vertical = 'center', 
 def return_tree(s, target, rootfilename, **kwargs):
     load_flag = kwargs.get('Load')
         
-    if load_flag != False and FileSys.file_check_json(s, rootfilename):
+    if FileSys.file_check_json(s, rootfilename) == True:
         if load_flag == None:
-            load_flag = MyUtil.get_yn('File already exists.  [Load from disk = Y, re-create = N] (Y/N)?')
-        tr = FileSys.file_read_json(rootfilename)
-        return(tr)
+            print('File [',rootfilename,'] already exists ', sep = '', end = '')
+            load_flag = MyUtil.get_yn('[Load from disk = Y, re-create = N] (Y/N)?')
+        if load_flag == True:       
+            tr = FileSys.file_read_json(rootfilename)
+            FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
+            return(tr)
             
-    tr = get_tree(s,target)
-#     print_tree(s, tr)
+    tr = get_tree(s,target, **kwargs)
     FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
+#     print_tree(s, tr)
     return(tr)
 
 def flat_tree(tree, key, list):
@@ -289,6 +292,7 @@ def build_tree(s, keyname, target, tree, **kwargs):
 
     for idx,d in enumerate(fd):
         handle = d['name'][1]
+        print(handle)
         if not handle in excludeList:
             if idx == 0:
                 dict['parent'] = handle

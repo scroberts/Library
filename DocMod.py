@@ -154,9 +154,9 @@ def print_report(docmodreport, doc):
 #         print('print_report name: ', name)
 #         print('print_report doc: ', doc)
         try:
-            print('\t', name, ' = ', doc[name])
+            print('\t', name, ' = ', doc[name], sep = '')
         except:
-            print('\t', name, ' = ', 'No Attribute Value Assigned')
+            print('\t', name, ' = ', 'No Attribute Value Assigned', sep = '')
     
 
 
