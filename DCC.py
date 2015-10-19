@@ -250,7 +250,7 @@ def login(url='',**kwargs):
     
 def make_collection(s,parentColl, collName, collDesc):
     # Create a collection, return the handle
-    url = CF.dcc_url + "/dsweb/MKCOL/" + parentColl
+    url = DCC_URL + "/dsweb/MKCOL/" + parentColl
     
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
      
@@ -259,7 +259,11 @@ def make_collection(s,parentColl, collName, collDesc):
     xml3 = """</description></prop></set></propertyupdate>"""
     xml = xml1 + collName + xml2 + collDesc + xml3   
     
-    r = s.post(url,data=xml,headers=headers)  # Gets limited data
+    r = s.post(url,data=xml,headers=headers)
+    print("make_collection status code:", r.status_code)    
+#     print('')
+#     print('\n',r.text)
+#     print('\n',r.headers)
     
     handle = r.headers['docushare-handle']
     return(handle)  
@@ -887,14 +891,20 @@ def test_keywords():
         Summary = 'Summary: Scott Summary',
         Title = 'Title: Scott Collection',
         Description = 'Description: Scott Description')
-                                    
+
+def test_makecoll():
+    s = login(Site = 'Test')
+    make_collection(s, 'Collection-10', 'Python Made Collection', '')
+                                     
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_props()
+#     test_props()
 #     test_version()
 #     test_change_owner()
 #     test_user_group()
 #     test_keywords()
+    test_makecoll()
+    
 
 
