@@ -38,7 +38,10 @@ def tracetree_login():
         
     return(s)
 
-def get_docmod_html_files(s):
+def get_docmod_html_files(s, **kwargs):
+
+    use_cache = kwargs.get('InfoSet',False)
+
     try:
         res = s.get(CF.docs_url_main)
         res.raise_for_status()
@@ -69,7 +72,7 @@ def get_docmod_html_files(s):
     for url in urls:
         if goodurl.search(url):
             newurllist.append(url)
-            if os.path.isfile(CF.tracetreefilepath + url):
+            if use_cache and os.path.isfile(CF.tracetreefilepath + url):
                 print('Found existing file: ', url)
             else:
                 print('Reading and saving: ', url)

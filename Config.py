@@ -12,7 +12,7 @@ dccfilepath = r'/Users/sroberts/Dropbox/TMT/Python/DCC Files/'
 reportfilepath = r'/Users/sroberts/Dropbox/TMT/Python/Reports/'
 
 # DocMod Module Definitions
-docs_url_base = 'https://trace-tree.tmt.org/TMT_Requirements/Documents/Documents/'
+docs_url_base = 'https://trace-tree.tmt.org/TMT_Requirements/Documents_Register/Documents_Register/'
 docs_url_main = docs_url_base + 'index.html'
 
 docmod_url_list_file = 'document_module_url_list.json'

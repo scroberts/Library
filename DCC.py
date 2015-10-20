@@ -39,13 +39,13 @@ def add_docs_2_collections(s, docs, colls):
     for c in colls:
         for d in docs:
             print('Adding ', d, ' to ', c)
-            url = CF.dcc_url + "/dsweb/COPY/" + d
+            url = DCC_URL + "/dsweb/COPY/" + d
             headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "DESTINATION": c}
             r = s.post(url, headers=headers)
             if debug: print(r.text)
             
 def change_owner(s, dochandle, userhandle):
-    url = CF.dcc_url + "/dsweb/PROPPATCH/" + dochandle
+    url = DCC_URL + "/dsweb/PROPPATCH/" + dochandle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><entityowner><dsref handle="'''
     xml += userhandle
@@ -81,7 +81,7 @@ def dcc_move(s, handle, source, dest):
     # disambiguate the MOVE request. Its value must be the handle of one of
     # the existing parents for <handle>.
     print('Moving ',handle,' from ', source,' to ', dest)
-    url = CF.dcc_url + "/dsweb/MOVE/" + handle
+    url = DCC_URL + "/dsweb/MOVE/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml", "SOURCE": source, "DESTINATION": dest}
     r = s.post(url, headers=headers) 
     print(r.text)
@@ -109,7 +109,7 @@ def dcc_remove_doc_from_coll(s, handle, coll):
     
 def file_download(s, handle, targetpath, filename):
     # Handle can be a Document-XXXXX, File-XXXXX or a Rendition-XXXXX
-    url = CF.dcc_url + "/dsweb/GET/" + handle
+    url = DCC_URL + "/dsweb/GET/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     r = s.post(url,headers=headers) 
     file = open(targetpath + filename,'wb')
@@ -287,7 +287,7 @@ def prop_get(s, handle, **kwargs):
     #  WriteProp = (True|False) - Write .html to disk?
     #  Print = (True|False) - Call print function on InfoSet?
 
-    url = CF.dcc_url + "/dsweb/PROPFIND/" + handle
+    url = DCC_URL + "/dsweb/PROPFIND/" + handle
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'Children' : '<children/>',
                 'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',    
@@ -337,8 +337,9 @@ def prop_get(s, handle, **kwargs):
         dom = BeautifulSoup(r.text)
         if retDom:
             return(dom)
-        fd = prop_scrape(dom, infoSet)
-        FileSys.file_write_json(fd, fRoot)
+        if infoSet in infoDic:        
+            fd = prop_scrape(dom, infoSet)
+            FileSys.file_write_json(fd, fRoot)
 
     if printFlag: 
         prop_print(infoSet,fd)
@@ -747,7 +748,7 @@ def set_permissions(s,handle,permdata):
     # fd follows the permissions dictionary format
     
     if debug: print('\n\nPermdata:', permdata, '\n\n')
-    url = CF.dcc_url + "/dsweb/PROPPATCH/" + handle
+    url = DCC_URL + "/dsweb/PROPPATCH/" + handle
     headers = {"DocuShare-Version":"6.2", "Content-Type":"text/xml", "Accept":"*/*, text/xml", "User-Agent":"DsAxess/4.0", "Accept-Language":"en"}
     xml = '''<?xml version="1.0" ?><propertyupdate><set><prop><acl handle="''' 
     xml += handle
@@ -785,7 +786,7 @@ def set_permissions(s,handle,permdata):
 
 def test_change_owner():
     # Login to DCC
-    s = login(CF.dcc_url + CF.dcc_login)
+    s = login(Site = 'Production')
     collhandle = 'Collection-10892'
     dochandle = 'Document-27819'
     curr_owner = 'User-50'
@@ -819,7 +820,7 @@ def test_change_owner():
 
 def test_version():
     # Login to DCC
-    s = login(CF.dcc_url + CF.dcc_login)
+    s = login(Site = 'Production')
 
     handle = 'Version-32465'
     fd = prop_get(s, handle, InfoSet = 'VerAll', WriteProp = True)
@@ -828,7 +829,7 @@ def test_version():
 
 def test_props():
     # Login to DCC
-    s = login(CF.dcc_url + CF.dcc_login)
+    s = login(Site = 'Production')
 
     collhandle = 'Collection-7337'
     collhandle = 'Collection-10259'
@@ -875,7 +876,7 @@ def test_props():
 
 def test_user_group():
     # Login to DCC
-    s = login(CF.dcc_url + CF.dcc_login)
+    s = login(Site = 'Production')
 
     grp = 'Group-666'
     fd = prop_get(s, grp, InfoSet = 'Group', Print = True, WriteProp = True)
@@ -895,7 +896,12 @@ def test_keywords():
 def test_makecoll():
     s = login(Site = 'Test')
     make_collection(s, 'Collection-10', 'Python Made Collection', '')
-                                     
+    
+def test_getall():
+    s = login(Site = 'Production')    
+    dochandle = 'Document-9946'
+    prop_get(s,dochandle, InfoSet = 'None', WriteProp = True)
+
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
@@ -904,7 +910,8 @@ if __name__ == '__main__':
 #     test_change_owner()
 #     test_user_group()
 #     test_keywords()
-    test_makecoll()
+#     test_makecoll()
+    test_getall()
     
 
 
