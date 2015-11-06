@@ -348,6 +348,10 @@ chk_published_keyword = dict_crit_act(
                 chk_dict('keywords','TMTPublished','in'),
                 {'Action' : 'Message', 'Message' : '*** TMTPublished keyword exists'})
                 
+chk_published_keyword_false = dict_crit_act(
+                {'NOT' : chk_dict('keywords','TMTPublished','in')},
+                {'Action' : 'Message', 'Message' : '*** WARNING: TMTPublished keyword DOES NOT exist'})
+                
 remove_published_keyword = dict_crit_act(
                 chk_dict('keywords','TMTPublished','in'),
                 {'Action' : 'DelKeyword', 'Keyword' : 'TMTPublished'})
