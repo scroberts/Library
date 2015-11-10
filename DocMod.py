@@ -91,7 +91,16 @@ def get_tracetree_docmod_dict(url):
     for child in dom.table.children:  
         try:
             field = child.td.string.strip()  
-            value = child.td.next_sibling.next_sibling.string.strip()
+#             print(field)
+            try:
+                next = child.td.next_sibling.next_sibling
+                value = next.string.strip() 
+#                 print('value', value)
+            except:
+#                 print('child.tr.td',child.tr.td)
+                value = child.tr.td.string.strip()
+#                 print('value',value)
+                    
             dict[field] = value
 #             print("[",field,"]","[", value, "]")
         except: 
@@ -160,6 +169,11 @@ def print_report(docmodreport, doc):
             print('\t', name, ' = ', doc[name], sep = '')
         except:
             print('\t', name, ' = ', 'No Attribute Value Assigned', sep = '')
+            
+            
+if __name__ == '__main__':
+    dict = get_tracetree_docmod_dict('1796.html')
+    print(dict)
     
 
 
