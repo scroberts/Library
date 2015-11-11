@@ -17,6 +17,7 @@ import Config as CF
 import Tree
 import FileSys
 
+# Global Variables
 debug = False
 DCC_URL = ''
 
@@ -286,8 +287,9 @@ def prop_get(s, handle, **kwargs):
     #  RetDom - Return BeautifulSoup object rather than file data structure
     #  WriteProp = (True|False) - Write .html to disk?
     #  Print = (True|False) - Call print function on InfoSet?
-
+    
     url = DCC_URL + "/dsweb/PROPFIND/" + handle
+
     headers = {"DocuShare-Version":"5.0", "Content-Type":"text/xml", "Accept":"text/xml"}
     infoDic = { 'Children' : '<children/>',
                 'CollCont' : '<title/><summary/><entityowner/><getlastmodified/>',    
@@ -539,7 +541,7 @@ def read_coll_cont(dom):
     for res in dom.find_all("response"):
         fd = {}
         fd['name'] = [res.title.text, get_handle(res.href.text)]
-        fd['title'] = res.title.text
+        fd['title'] = strip_html(res.title.text)
         fd['handle'] = get_handle(res.href.text)
         fd['owner-name'] = dom.entityowner.displayname.text
         fd['owner-username'] = dom.entityowner.username.text
@@ -555,7 +557,7 @@ def read_coll_data(dom):
     # Applies to collection data for Depth = '0'
     fd = {}
     fd['handle'] = get_handle(dom.response.href.text)
-    fd['title'] = dom.title.text
+    fd['title'] = strip_html(dom.title.text)
     fd['summary'] = dom.summary.text
     fd['keywords'] = dom.keywords.text
     fd['date'] = dom.getlastmodified.text
@@ -566,7 +568,7 @@ def read_coll_data(dom):
     
 def read_doc_basic_data(dom):
     fd = {}
-    fd['title'] = dom.displayname.text
+    fd['title'] = strip_html(dom.displayname.text)
     fd['handle'] = get_handle(dom.handle.dsref['handle'])
     fd['tmtnum'] = dom.summary.text
     fd['filename'] = dom.document.text
@@ -582,7 +584,7 @@ def read_doc_basic_data(dom):
 def read_doc_data(dom):
     # fill in file data dictionary
     fd = {}
-    fd['title'] = dom.displayname.text
+    fd['title'] = strip_html(dom.displayname.text)
     fd['handle'] = get_handle(dom.href.text)
     fd['tmtnum'] = dom.summary.text
 
@@ -675,7 +677,7 @@ def read_perm(dom):
 def read_title(dom):
     # fill in data dictionary
     fd = {}
-    fd['title'] = dom.displayname.text
+    fd['title'] = strip_html(dom.displayname.text)
     fd['handle'] = get_handle(dom.handle.dsref['handle'])
     return(fd)
     
@@ -696,7 +698,7 @@ def read_ver_data(dom):
     fd['dccver'] = dom.handle.dsref["handle"]
     fd['dccdoc'] = get_handle(dom.find('parents').dsref["handle"])
     fd['dccvernum'] = dom.version_number.text
-    fd['dcctitle'] = dom.title.text
+    fd['dcctitle'] = strip_html(dom.title.text)
     fd['vercomment'] = dom.revision_comments.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
@@ -783,6 +785,9 @@ def set_permissions(s,handle,permdata):
     # Now write new permissions back to cache
     fd = prop_get(s, handle, InfoSet = 'Perms')
 
+def strip_html(htmltext):
+    dom = BeautifulSoup(htmltext)
+    return(dom.text)
 
 def test_change_owner():
     # Login to DCC
@@ -830,6 +835,7 @@ def test_version():
 def test_props():
     # Login to DCC
     s = login(Site = 'Production')
+    print('test_props: DCC_URL',DCC_URL)
 
     collhandle = 'Collection-7337'
     collhandle = 'Collection-10259'
@@ -840,6 +846,7 @@ def test_props():
     
     dochandle = 'Document-2688'
     dochandle = 'Document-27819'
+    dochandle = 'Document-10107'
     
     start = time.time()
 
@@ -899,13 +906,13 @@ def test_makecoll():
     
 def test_getall():
     s = login(Site = 'Production')    
-    dochandle = 'Document-9946'
+    dochandle = 'Document-10107'
     prop_get(s,dochandle, InfoSet = 'None', WriteProp = True)
 
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-#     test_props()
+    test_props()
 #     test_version()
 #     test_change_owner()
 #     test_user_group()

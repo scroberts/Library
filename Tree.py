@@ -362,10 +362,15 @@ if __name__ == '__main__':
     
 #     load_flag = True
 
-    froot = 'Listing of WFOS for Suijian'
-    coll = 'Collection-7798'
+#     froot = 'Listing of WFOS for Suijian'
+#     coll = 'Collection-7798'
+#     tr = return_tree(s, coll, froot)
+#     html_tree(s,tr,froot)
+ 
+    froot = 'Test of HTML bug'
+    coll = 'Collection-2656'
     tr = return_tree(s, coll, froot)
-    html_tree(s,tr,froot)
+    html_tree(s,tr,froot)   
 
 #     froot = 'Listing of IRIS'
 #     coll = 'Collection-2463'

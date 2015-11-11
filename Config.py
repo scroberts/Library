@@ -19,4 +19,3 @@ docmod_url_list_file = 'document_module_url_list.json'
 docmod_dict_file = 'document_module.json'
 
 tracetreefilepath = r'/Users/sroberts/Dropbox/TMT/Python/TraceTree Files/'
-
