@@ -294,7 +294,29 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
     GetUrlWord.get_url_word(dirpath + outroot, dirpath + htmlfile)  
 
     # Login to DCC
-    s = DCC.login(CF.dcc_url + CF.dcc_login)
+    prod = ['prod', 'production', 'p', ' ']
+    tes = ['test', 'tes', 't']
+    checker = False
+    print("Would you like to log into the production site or the test site?")
+    print("Valid Inputs are as follows: Production, prod, p, test, t :", end="")
+    choice = input().lower()
+    #while loop to continue asking the user for input until a correct input has been entered
+    while (checker == False):
+        #Production site login choice
+        if(choice in prod):
+            print("You are now logging into the Production version of DocuShare")
+            s = DCC.login(Site ='Production')
+            checker = True
+        #test site login choice
+        elif(choice in tes):
+            print("You are now logging into the test VM DocuShare")
+            s = DCC.login(Site ='Test')
+            checker = True
+        #cf.dcc_url + cf.dcc_login
+        #error message alerting user to enter a valid choice
+        else:
+            print("Please enter a valid choice, (P)roduction or (T)est")
+            choice = input().lower()
 
     json_handlelist = dirpath + outroot + 'bothlist.txt'
     json_ssdata = dirpath + outroot + 'CID.txt'
