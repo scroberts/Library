@@ -90,32 +90,36 @@ def url_loc(handle):
     return('https://docushare.tmt.org/docushare/dsweb/ServicesLib/' + handle + '/Location')
 
 
-def iter_html_tree(s, htmlfile, tree, key, indent):
+def iter_html_tree(s, htmlfile, tree, key, indent, **kwargs):
     branch = tree[key]
+    
+    keyword = kwargs.get('Keyword', '')
+    
     for doc in branch['documents']:
-        print(doc)
         nameData = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
-        print('<div style="text-indent: ',str(indent),'em;">',file=htmlfile,sep='')
-        print('<p>',file=htmlfile,sep='')
-        print(href_str(nameData['title'],url_access(doc)),file=htmlfile,sep='')
-        print('[',file=htmlfile,sep='')
-        print(href_str(doc,url_view(doc)),file=htmlfile,sep='') 
-        print(', ',file=htmlfile,sep='')
-        print(href_str('Perm',url_perm(doc)),file=htmlfile,sep='')
-        print(', ',file=htmlfile,sep='')
-        print(href_str('Ver',url_ver(doc)),file=htmlfile,sep='')
-        print(', ',file=htmlfile,sep='')
-        print(href_str('Loc',url_loc(doc)),file=htmlfile,sep='')
-        print(']',file=htmlfile,sep='')
-        print('</p>',file=htmlfile,sep='')
-        print('</div>',file=htmlfile,sep='') 
+        if keyword in nameData['keywords']:
+            print(doc)
+            print('<div style="text-indent: ',str(indent),'em;">',file=htmlfile,sep='')
+            print('<p>',file=htmlfile,sep='')
+            print(href_str(nameData['title'],url_access(doc)),file=htmlfile,sep='')
+            print('[',file=htmlfile,sep='')
+            print(href_str(doc,url_view(doc)),file=htmlfile,sep='') 
+            print(', ',file=htmlfile,sep='')
+            print(href_str('Perm',url_perm(doc)),file=htmlfile,sep='')
+            print(', ',file=htmlfile,sep='')
+            print(href_str('Ver',url_ver(doc)),file=htmlfile,sep='')
+            print(', ',file=htmlfile,sep='')
+            print(href_str('Loc',url_loc(doc)),file=htmlfile,sep='')
+            print(']',file=htmlfile,sep='')
+            print('</p>',file=htmlfile,sep='')
+            print('</div>',file=htmlfile,sep='') 
                 
-        print('<div style="text-indent: ',str(indent+2),'em;">',file=htmlfile,sep='')
-        print('<p>TMT Doc. Num.: ',nameData['tmtnum'],'</p>',file=htmlfile,sep='') 
-        print('<p>Owner: ',nameData['owner-name'],file=htmlfile,sep='')
-        print('<p>Filename: ',nameData['filename'],file=htmlfile,sep='')
-        print('<p>Date Modified: ',nameData['date'],file=htmlfile,sep='')
-        print('</div>',file=htmlfile,sep='') 
+            print('<div style="text-indent: ',str(indent+2),'em;">',file=htmlfile,sep='')
+            print('<p>TMT Doc. Num.: ',nameData['tmtnum'],'</p>',file=htmlfile,sep='') 
+            print('<p>Owner: ',nameData['owner-name'],file=htmlfile,sep='')
+            print('<p>Filename: ',nameData['filename'],file=htmlfile,sep='')
+            print('<p>Date Modified: ',nameData['date'],file=htmlfile,sep='')
+            print('</div>',file=htmlfile,sep='') 
                 
     for other in branch['others']:
         print(other)
@@ -152,15 +156,15 @@ def iter_html_tree(s, htmlfile, tree, key, indent):
 
         print('</p>',file=htmlfile,sep='')
         print('</div>',file=htmlfile,sep='')        
-        iter_html_tree(s, htmlfile, tree, col, indent+2)
+        iter_html_tree(s, htmlfile, tree, col, indent+2, **kwargs)
         
-def html_tree(s,tree,froot):
+def html_tree(s,tree,froot,**kwargs):
     htmlfile = open(CF.reportfilepath + froot+'.html','w+')
     print('<!DOCTYPE html><html><body>',file = htmlfile)
     print('<style> p {line-height: 0.35} </style>', file = htmlfile)
     print('<h1>',froot,'</h1>', file = htmlfile)
 
-    iter_html_tree(s, htmlfile, tree, 'root', 0)
+    iter_html_tree(s, htmlfile, tree, 'root', 0, **kwargs)
     
     print('</body></html>',file = htmlfile)  
     htmlfile.close
@@ -252,28 +256,32 @@ def xls_print_ssrow(ws, collData, docData, ssrow):
 # Global Variable ssrow
 ssrow = 2
 
-def xls_tree_iter(s,ws,tree,col):
+def xls_tree_iter(s,ws,tree,col, **kwargs):
     global ssrow
     # Write and format the headings in Excel
     xls_tree_headings(ws)
 
     collData = DCC.prop_get(s, col, InfoSet = 'Title')
     branch = tree[col]
+    
+    keyword = kwargs.get('Keyword', '')
+    
     for doc in branch['documents']:
         print(col,doc)
         docData = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
         docData['Versions'] = DCC.prop_get(s,doc,InfoSet = 'Versions',WriteProp = True)
-        xls_print_ssrow(ws, collData, docData, ssrow)
-        ssrow += 1
+        if keyword in docData['keywords']:
+            xls_print_ssrow(ws, collData, docData, ssrow)
+            ssrow += 1
     for newcol in branch['collections']:
-        xls_tree_iter(s,ws,tree,newcol)
+        xls_tree_iter(s,ws,tree,newcol,**kwargs)
         
-def xls_tree(s,tree,col,fname):
+def xls_tree(s,tree,col,fname, **kwargs):
     # Open the spreadsheet
     wb = openpyxl.Workbook()
     ws = wb.worksheets[0]
     
-    xls_tree_iter(s,ws,tree,col)
+    xls_tree_iter(s,ws,tree,col,**kwargs)
     
     wb.save(CF.reportfilepath + fname + '.xls')   
 
