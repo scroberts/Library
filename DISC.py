@@ -397,7 +397,7 @@ def test_bulletin_post():
     
     create_bb_post(s, title, description, keywords, handle)
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 #     print("Running module test code for",__file__)
 #     test_bulletin_post()
 
