@@ -568,7 +568,9 @@ def read_coll_data(dom):
     
 def read_doc_basic_data(dom):
     fd = {}
-    fd['title'] = strip_html(dom.displayname.text)
+    # take care of & in html to not interpret as an escape character
+    str = dom.displayname.text.replace('&','&amp;')
+    fd['title'] = strip_html(str)
     fd['handle'] = get_handle(dom.handle.dsref['handle'])
     fd['tmtnum'] = dom.summary.text
     fd['filename'] = dom.document.text
@@ -909,16 +911,21 @@ def test_getall():
     dochandle = 'Document-10107'
     prop_get(s,dochandle, InfoSet = 'None', WriteProp = True)
 
+def test_ampersand():
+    s = login(Site = 'Production')    
+    dochandle = 'Document-32008'
+    prop_get(s,dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_props()
+#     test_props()
 #     test_version()
 #     test_change_owner()
 #     test_user_group()
 #     test_keywords()
 #     test_makecoll()
-    test_getall()
+#     test_getall()
+    test_ampersand()
     
 
 
