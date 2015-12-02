@@ -9,10 +9,12 @@ import re
 import os
 import json
 import getpass
+import platform
 from bs4 import BeautifulSoup, Tag, NavigableString
 import requests
 from requests.auth import HTTPDigestAuth
 from requests.auth import HTTPBasicAuth
+
 
 # My modules
 import DCC
@@ -40,10 +42,14 @@ def tracetree_login():
 
 def get_docmod_html_files(s, **kwargs):
 
+    verify_flag = True
+    if platform.system() == 'Windows':
+        verify_flag = False
+
     use_cache = kwargs.get('InfoSet',False)
 
     try:
-        res = s.get(CF.docs_url_main)
+        res = s.get(CF.docs_url_main, verify = verify_flag)
         res.raise_for_status()
     except:
         print('Unable to get from TraceTree, check login credentials')
