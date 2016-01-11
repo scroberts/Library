@@ -11,12 +11,12 @@ import FileSys
 debug = False
 
 def in_dict(key, val, dict, **kwargs):
-    debug = False
 # checks if key has a value that matches val
 # kwargs:
 #   Match = 'eq' or 'in'
 #       eq means exact match (==)
 #       in means in string (in)
+    debug = False
     if debug: print('checking key = ', key, 'val = ', val)
     if debug: print('in dict = ',dict)
     match = kwargs.get('Match', 'eq')
@@ -56,10 +56,10 @@ def parse(p,dict):
 #     key, val = next(iter(p.items()))
     for key, val in p.items():
         if key == 'AND':
-            if debug: print('AND Parsing: val = ', val)
+#             print('AND Parsing: val = ', val)
             # expects a list of dicts
             for d in val:
-                if debug: print('AND Parsing: d = ', d)
+#                 print('AND Parsing: d = ', d)
                 if not parse(d, dict):
                     return(False)
             return(True)
@@ -85,13 +85,8 @@ def parse(p,dict):
             k = val['key']
             v = val['val']
             m = val['match']
-            if debug: print('checking k, v',k,v)
+#             print('checking k, v',k,v)
             return(in_dict(k, v, dict, Match = m))
-        elif key == 'InList':
-            v = val['val']
-            l = val['list']
-            m = val['match']
-            return(in_list(v,l,Match = m))
         else:
             print('key = ', key)
             print('Error - key not found')
