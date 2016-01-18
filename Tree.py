@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
 # external modules
-import openpyxl
-from openpyxl.styles import Font, Style, Alignment
-from openpyxl.styles.colors import BLUE
-
 
 # my modules
 import DCC
@@ -12,29 +8,18 @@ import Config as CF
 import FileSys
 import MyUtil
 
-# Set Excel Styles
-# Excel hyperlink style is calibri 11, underline blue
-font_url_style = Font(color = BLUE, underline = 'single')
-bold_style = Font(bold = True)
-align_hv_cen_style = Alignment(horizontal = 'center', vertical = 'center')
-align_ver_cen_style = Alignment(vertical = 'center')
-align_hv_cen_wrap_style = Alignment(horizontal = 'center', vertical = 'center', wrap_text = True)
-
 def return_tree(s, target, rootfilename, **kwargs):
     load_flag = kwargs.get('Load')
         
-    if FileSys.file_check_json(s, rootfilename) == True:
+    if load_flag != False and FileSys.file_check_json(s, rootfilename):
         if load_flag == None:
-            print('File [',rootfilename,'] already exists ', sep = '', end = '')
-            load_flag = MyUtil.get_yn('[Load from disk = Y, re-create = N] (Y/N)?')
-        if load_flag == True:       
-            tr = FileSys.file_read_json(rootfilename)
-            FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
-            return(tr)
+            load_flag = MyUtil.get_yn('File already exists.  [Load from disk = Y, re-create = N] (Y/N)?')
+        tr = FileSys.file_read_json(rootfilename)
+        return(tr)
             
-    tr = get_tree(s,target, **kwargs)
-    FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
+    tr = get_tree(s,target)
 #     print_tree(s, tr)
+    FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
     return(tr)
 
 def flat_tree(tree, key, list):
@@ -90,36 +75,32 @@ def url_loc(handle):
     return('https://docushare.tmt.org/docushare/dsweb/ServicesLib/' + handle + '/Location')
 
 
-def iter_html_tree(s, htmlfile, tree, key, indent, **kwargs):
+def iter_html_tree(s, htmlfile, tree, key, indent):
     branch = tree[key]
-    
-    keyword = kwargs.get('Keyword', '')
-    
     for doc in branch['documents']:
+        print(doc)
         nameData = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
-        if keyword in nameData['keywords']:
-            print(doc)
-            print('<div style="text-indent: ',str(indent),'em;">',file=htmlfile,sep='')
-            print('<p>',file=htmlfile,sep='')
-            print(href_str(nameData['title'],url_access(doc)),file=htmlfile,sep='')
-            print('[',file=htmlfile,sep='')
-            print(href_str(doc,url_view(doc)),file=htmlfile,sep='') 
-            print(', ',file=htmlfile,sep='')
-            print(href_str('Perm',url_perm(doc)),file=htmlfile,sep='')
-            print(', ',file=htmlfile,sep='')
-            print(href_str('Ver',url_ver(doc)),file=htmlfile,sep='')
-            print(', ',file=htmlfile,sep='')
-            print(href_str('Loc',url_loc(doc)),file=htmlfile,sep='')
-            print(']',file=htmlfile,sep='')
-            print('</p>',file=htmlfile,sep='')
-            print('</div>',file=htmlfile,sep='') 
+        print('<div style="text-indent: ',str(indent),'em;">',file=htmlfile,sep='')
+        print('<p>',file=htmlfile,sep='')
+        print(href_str(nameData['title'],url_access(doc)),file=htmlfile,sep='')
+        print('[',file=htmlfile,sep='')
+        print(href_str(doc,url_view(doc)),file=htmlfile,sep='') 
+        print(', ',file=htmlfile,sep='')
+        print(href_str('Perm',url_perm(doc)),file=htmlfile,sep='')
+        print(', ',file=htmlfile,sep='')
+        print(href_str('Ver',url_ver(doc)),file=htmlfile,sep='')
+        print(', ',file=htmlfile,sep='')
+        print(href_str('Loc',url_loc(doc)),file=htmlfile,sep='')
+        print(']',file=htmlfile,sep='')
+        print('</p>',file=htmlfile,sep='')
+        print('</div>',file=htmlfile,sep='') 
                 
-            print('<div style="text-indent: ',str(indent+2),'em;">',file=htmlfile,sep='')
-            print('<p>TMT Doc. Num.: ',nameData['tmtnum'],'</p>',file=htmlfile,sep='') 
-            print('<p>Owner: ',nameData['owner-name'],file=htmlfile,sep='')
-            print('<p>Filename: ',nameData['filename'],file=htmlfile,sep='')
-            print('<p>Date Modified: ',nameData['date'],file=htmlfile,sep='')
-            print('</div>',file=htmlfile,sep='') 
+        print('<div style="text-indent: ',str(indent+2),'em;">',file=htmlfile,sep='')
+        print('<p>TMT Doc. Num.: ',nameData['tmtnum'],'</p>',file=htmlfile,sep='') 
+        print('<p>Owner: ',nameData['owner-name'],file=htmlfile,sep='')
+        print('<p>Filename: ',nameData['filename'],file=htmlfile,sep='')
+        print('<p>Date Modified: ',nameData['date'],file=htmlfile,sep='')
+        print('</div>',file=htmlfile,sep='') 
                 
     for other in branch['others']:
         print(other)
@@ -156,134 +137,18 @@ def iter_html_tree(s, htmlfile, tree, key, indent, **kwargs):
 
         print('</p>',file=htmlfile,sep='')
         print('</div>',file=htmlfile,sep='')        
-        iter_html_tree(s, htmlfile, tree, col, indent+2, **kwargs)
+        iter_html_tree(s, htmlfile, tree, col, indent+2)
         
-def html_tree(s,tree,froot,**kwargs):
-    htmlfile = open(CF.reportfilepath + froot+'.html','w+')
+def html_tree(s,tree,froot):
+    htmlfile = open(CF.dccfilepath + froot+'.html','w+')
     print('<!DOCTYPE html><html><body>',file = htmlfile)
     print('<style> p {line-height: 0.35} </style>', file = htmlfile)
     print('<h1>',froot,'</h1>', file = htmlfile)
 
-    iter_html_tree(s, htmlfile, tree, 'root', 0, **kwargs)
+    iter_html_tree(s, htmlfile, tree, 'root', 0)
     
     print('</body></html>',file = htmlfile)  
     htmlfile.close
-
-def xls_tree_headings(ws):
-    col = 1
-    ws.cell(row = 1, column = col).value = "ID"
-    col += 1
-    ws.cell(row = 1, column = col).value = "Collection Handle"
-    col += 1
-    ws.cell(row = 1, column = col).value = "Collection Title"
-    col += 1
-    ws.cell(row = 1, column = col).value = "Document Title"
-    col += 1
-    ws.cell(row = 1, column = col).value = "Document Handle"
-    col += 1    
-    ws.cell(row = 1, column = col).value = "Version Handle"   
-    col += 1
-    ws.cell(row = 1, column = col).value = "Owner"
-    col += 1
-    ws.cell(row = 1, column = col).value = "File Name"
-    col += 1
-    ws.cell(row = 1, column = col).value = "Date Modified"
-    
-    colcnt = col+1
-    
-    for col in range(1, colcnt):
-        ws.cell(row = 1, column = col).alignment = align_hv_cen_wrap_style
-        ws.cell(row = 1, column = col).font = bold_style
-
-
-def xls_print_ssrow(ws, collData, docData, ssrow):
-    col = 1
-    
-    # Column 1: ID    
-    ws.cell(row = ssrow, column = col).value = ssrow-1
-    ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
-    col += 1
-    
-    # Column 2: Coll Handle
-    ws.cell(row = ssrow, column = col).value = collData['handle']
-    ws.cell(row = ssrow, column = col).font = font_url_style
-    ws.cell(row = ssrow, column = col).hyperlink = url_view(collData['handle'])
-    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
-    col += 1
-
-    # Column 3: Coll Name
-    ws.cell(row = ssrow, column = col).value = collData['title']
-    ws.cell(row = ssrow, column = col).font = font_url_style
-    ws.cell(row = ssrow, column = col).hyperlink = url_access(collData['handle'])
-    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
-    col += 1    
-    
-    # Column 4: Doc Title
-    ws.cell(row = ssrow, column = col).value = docData['title']
-    ws.cell(row = ssrow, column = col).font = font_url_style
-    ws.cell(row = ssrow, column = col).hyperlink = url_access(docData['handle'])
-    ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
-    col += 1   
-    
-    # Column 5: Doc Handle
-    ws.cell(row = ssrow, column = col).value = docData['handle']
-    ws.cell(row = ssrow, column = col).font = font_url_style
-    ws.cell(row = ssrow, column = col).hyperlink = url_view(docData['handle'])
-    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
-    col += 1  
-    
-    # Column 6: Ver Handle
-    ws.cell(row = ssrow, column = col).value = docData['Versions']['prefver']
-    ws.cell(row = ssrow, column = col).font = font_url_style
-    ws.cell(row = ssrow, column = col).hyperlink = url_view(docData['Versions']['prefver'])
-    ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
-    col += 1   
-
-    # Column 7: Owner
-    ws.cell(row = ssrow, column = col).value = docData['owner-name']
-    ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
-    col += 1   
-
-    # Column 8: File Name
-    ws.cell(row = ssrow, column = col).value = docData['filename']
-    ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
-    col += 1   
-    
-    # Column 9: Date Modified
-    ws.cell(row = ssrow, column = col).value = docData['date']
-    ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
-
-# Global Variable ssrow
-ssrow = 2
-
-def xls_tree_iter(s,ws,tree,col, **kwargs):
-    global ssrow
-    # Write and format the headings in Excel
-    xls_tree_headings(ws)
-
-    collData = DCC.prop_get(s, col, InfoSet = 'Title')
-    branch = tree[col]
-    
-    keyword = kwargs.get('Keyword', '')
-    
-    for doc in branch['documents']:
-        print(col,doc)
-        docData = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
-        docData['Versions'] = DCC.prop_get(s,doc,InfoSet = 'Versions',WriteProp = True)
-        if keyword in docData['keywords']:
-            xls_print_ssrow(ws, collData, docData, ssrow)
-            ssrow += 1
-    for newcol in branch['collections']:
-        xls_tree_iter(s,ws,tree,newcol,**kwargs)
-        
-def xls_tree(s,tree,col,fname, **kwargs):
-    # Open the spreadsheet
-    wb = openpyxl.Workbook()
-    ws = wb.worksheets[0]
-    
-    xls_tree_iter(s,ws,tree,col,**kwargs)
-    
-    wb.save(CF.reportfilepath + fname + '.xls')   
 
 def build_tree(s, keyname, target, tree, **kwargs):
     # kwargs options:
@@ -300,7 +165,6 @@ def build_tree(s, keyname, target, tree, **kwargs):
 
     for idx,d in enumerate(fd):
         handle = d['name'][1]
-        print(handle)
         if not handle in excludeList:
             if idx == 0:
                 dict['parent'] = handle
@@ -368,27 +232,12 @@ if __name__ == '__main__':
 # #     print_tree(s,tr)
 #     html_tree(s,tr,froot)
     
-#     load_flag = True
-
-#     froot = 'Listing of WFOS for Suijian'
-#     coll = 'Collection-7798'
-#     tr = return_tree(s, coll, froot)
-#     html_tree(s,tr,froot)
- 
-    froot = 'Test of HTML bug'
-    coll = 'Collection-2656'
+    load_flag = True
+    
+    froot = 'Listing of IRIS'
+    coll = 'Collection-2463'
     tr = return_tree(s, coll, froot)
-    html_tree(s,tr,froot)   
-
-#     froot = 'Listing of IRIS'
-#     coll = 'Collection-2463'
-
-#     froot = 'Listing of STR CID'
-#     coll = 'Collection-10669'
-#     coll = 'Collection-11377'
-#     tr = return_tree(s, coll, froot)
-#     xls_tree(s,tr,coll,froot)
-#     html_tree(s,tr,froot)
+    html_tree(s,tr,froot)
     
 #     froot = 'Listing of STR CID'
 #     coll = 'Collection-10668'
