@@ -71,61 +71,6 @@ def check_docs_in_coll(s, dl, cl):
             else:
                 print(d, ' found in ', c)
     
-def create_collections():
-    #creates sets that define the user choice to cover miscellaneous cases
-    prod = ['prod', 'production', 'p', ' ']
-    tes = ['test', 'tes', 't']
-    checker = False
-    print("Would you like to log into the production site or the test site?")
-    print('\n')
-    print("Valid Inputs are as follows: Production, prod, p, test, t :")
-    choice = input().lower()
-    #while loop to continue asking the user for input until a correct input has been entered
-    while (checker == False):
-        #Production site login choice
-        if(choice in prod):
-            print("You are now logging into the Production version of DocuShare")
-            print
-            s = DCC.login(Site ='Production')
-            checker = True
-        #test site login choice
-        elif(choice in tes):
-            print("You are now logging into the test VM DocuShare")
-            print
-            s = DCC.login(Site ='Test')
-            checker = True
-            #cf.dcc_url + cf.dcc_login 
-        #error message alerting user to enter a valid choice
-        else:
-            print("Please enter a valid choice, (P)roduction or (T)est")
-            choice = input().lower()
-    yes = ['yes', 'y', 'ye']
-    #creates a new boolean variable to allow user to break from loop
-    checker1 = False
-    print("Please enter a User number that you would like to assign to a collection")
-    #checker1 only true when user enters correct information 
-    while(checker1 == False):
-        use = input()
-        User = 'User-' + use
-        print("Please enter the doc handle of the document being reassigned:")
-        print
-        d = input()
-        doc = 'Handle-' + d
-        # double checks user to make sure that they would like to create this collection
-        print("Are you sure that you want to modify: " + doc + " and reassign to " + User)
-        print("Valid Inputs are as follows: Yes, Y, No, N")
-        print
-        ans = input().lower()
-        # checks that user input is correct, if the answer is a valid form of yes
-        # then the collection will be made and the user will break from the loop
-        if(ans in yes):
-            print("You are now reassigning: " + doc + " to " + User )
-            DCC.change_owner(s, doc, User)
-           
-        else:
-            print("Please re-enter a Collection number followed by a Collection name")
-            
-    
 def dcc_move(s, handle, source, dest):
     # Syntax:	MOVE / <handle>
     # HTTP Method:	POST
@@ -280,7 +225,7 @@ def login(url='',**kwargs):
             print('Could not determine password from secrets file')
                 
     except:
-        uname = input("Enter Docushare Username:")
+        uname = input("Enter TMT Docushare Username:")
         pword = getpass.getpass()
         
     dname = "DocuShare"
@@ -623,7 +568,9 @@ def read_coll_data(dom):
     
 def read_doc_basic_data(dom):
     fd = {}
-    fd['title'] = strip_html(dom.displayname.text)
+    # take care of & in html to not interpret as an escape character
+    str = dom.displayname.text.replace('&','&amp;')
+    fd['title'] = strip_html(str)
     fd['handle'] = get_handle(dom.handle.dsref['handle'])
     fd['tmtnum'] = dom.summary.text
     fd['filename'] = dom.document.text
@@ -964,13 +911,21 @@ def test_getall():
     dochandle = 'Document-10107'
     prop_get(s,dochandle, InfoSet = 'None', WriteProp = True)
 
+def test_ampersand():
+    s = login(Site = 'Production')    
+    dochandle = 'Document-32008'
+    prop_get(s,dochandle, InfoSet = 'DocBasic', WriteProp = True, Print = True)
 
 if __name__ == '__main__':
     print("Running module test code for",__file__)
-    test_props()
+#     test_props()
 #     test_version()
 #     test_change_owner()
 #     test_user_group()
 #     test_keywords()
 #     test_makecoll()
-    test_getall()
+#     test_getall()
+    test_ampersand()
+    
+
+
