@@ -9,10 +9,12 @@ import re
 import os
 import json
 import getpass
+import platform
 from bs4 import BeautifulSoup, Tag, NavigableString
 import requests
 from requests.auth import HTTPDigestAuth
 from requests.auth import HTTPBasicAuth
+
 
 # My modules
 import DCC
@@ -38,9 +40,16 @@ def tracetree_login():
         
     return(s)
 
-def get_docmod_html_files(s):
+def get_docmod_html_files(s, **kwargs):
+
+    verify_flag = True
+    if platform.system() == 'Windows':
+        verify_flag = False
+
+    use_cache = kwargs.get('InfoSet',False)
+
     try:
-        res = s.get(CF.docs_url_main)
+        res = s.get(CF.docs_url_main, verify = verify_flag)
         res.raise_for_status()
     except:
         print('Unable to get from TraceTree, check login credentials')
@@ -69,7 +78,7 @@ def get_docmod_html_files(s):
     for url in urls:
         if goodurl.search(url):
             newurllist.append(url)
-            if os.path.isfile(CF.tracetreefilepath + url):
+            if use_cache and os.path.isfile(CF.tracetreefilepath + url):
                 print('Found existing file: ', url)
             else:
                 print('Reading and saving: ', url)
@@ -88,7 +97,16 @@ def get_tracetree_docmod_dict(url):
     for child in dom.table.children:  
         try:
             field = child.td.string.strip()  
-            value = child.td.next_sibling.next_sibling.string.strip()
+#             print(field)
+            try:
+                next = child.td.next_sibling.next_sibling
+                value = next.string.strip() 
+#                 print('value', value)
+            except:
+#                 print('child.tr.td',child.tr.td)
+                value = child.tr.td.string.strip()
+#                 print('value',value)
+                    
             dict[field] = value
 #             print("[",field,"]","[", value, "]")
         except: 
@@ -154,9 +172,14 @@ def print_report(docmodreport, doc):
 #         print('print_report name: ', name)
 #         print('print_report doc: ', doc)
         try:
-            print('\t', name, ' = ', doc[name])
+            print('\t', name, ' = ', doc[name], sep = '')
         except:
-            print('\t', name, ' = ', 'No Attribute Value Assigned')
+            print('\t', name, ' = ', 'No Attribute Value Assigned', sep = '')
+            
+            
+if __name__ == '__main__':
+    dict = get_tracetree_docmod_dict('1796.html')
+    print(dict)
     
 
 
