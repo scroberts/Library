@@ -25,8 +25,8 @@ def return_tree(s, target, rootfilename, **kwargs):
         
     if FileSys.file_check_json(s, rootfilename) == True:
         if load_flag == None:
-            print('File [',rootfilename,'] already exists ', sep = '', end = '')
-            load_flag = MyUtil.get_yn('[Load from disk = Y, re-create = N] (Y/N)?')
+            print('File [',rootfilename,'] already exists - use existing file? ', sep = '', end = '')
+            load_flag = MyUtil.get_yn('[Load from disk = Y, re-create = N] (Y/N)? ')
         if load_flag == True:       
             tr = FileSys.file_read_json(rootfilename)
             FileSys.file_write_json(tr, rootfilename, path = CF.dccfilepath)
