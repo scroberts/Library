@@ -43,8 +43,8 @@ def tracetree_login():
 def get_docmod_html_files(s, **kwargs):
 
     verify_flag = True
-    if platform.system() == 'Windows':
-        verify_flag = False
+#     if platform.system() == 'Windows':
+#         verify_flag = False
 
     use_cache = kwargs.get('InfoSet',False)
 
@@ -60,7 +60,7 @@ def get_docmod_html_files(s, **kwargs):
         webfile.write(chunk)
     webfile.close
 
-    dom = BeautifulSoup(res.text)
+    dom = BeautifulSoup(res.text, "html.parser")
     urls = []
 
     for link in dom.find_all('a'):
@@ -92,7 +92,7 @@ def get_docmod_html_files(s, **kwargs):
             
 def get_tracetree_docmod_dict(url):
     file = open(CF.tracetreefilepath + url,'r',encoding='latin-1').read()
-    dom = BeautifulSoup(file)
+    dom = BeautifulSoup(file, "html.parser")
     dict = {}
     for child in dom.table.children:  
         try:
