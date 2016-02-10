@@ -344,6 +344,10 @@ add_published_keyword = dict_crit_act(
                 {'NOT' : chk_dict('keywords','TMTPublished','in')},
                 {'Action' : 'AddKeyword', 'Keyword' : 'TMTPublished '})
                 
+chk_confidential_keyword = dict_crit_act(
+                chk_dict('keywords','Confidential','in'),
+                {'Action' : 'Message', 'Message' : '*** Confidential keyword exists'})
+                
 chk_published_keyword = dict_crit_act(
                 chk_dict('keywords','TMTPublished','in'),
                 {'Action' : 'Message', 'Message' : '*** TMTPublished keyword exists'})
@@ -368,7 +372,6 @@ tmtnum_message = dict_crit_act(
                 chk_dict('tmtnum','DRF','in'),
                 {'Action' : 'Message', 'Message' : '>>> This is a Draft Document'})
 
-    
 SET_TEST = {
         'ObjSel'    : { 'Criteria' : docORcol},
         'ObjAct'    : [ if_owner_roberts_change_rogers,
@@ -379,6 +382,18 @@ SET_TEST = {
                         tmtnum_message],
         'PermAct'   : [if_user_print_message]} 
         
+
+SET_PUBLISHED = {
+        'ObjSel'    : { 'Criteria' : {'AND' : [docORcol, {'NOT' : chk_dict('keywords','Confidential','in')}]}},
+        'ObjAct'    : [],
+        'PermAct'   : [ PERMACT_ADD_se_readership,
+                        PERMACT_CHANGE_se_readership_RO,
+                        PERMACT_REMOVE_ro_users,
+                        PERMACT_REMOVE_ro_groups_except_se_reader,
+                        PERMACT_REMOVE_grp_usr_perm_W_or_M_no_R,
+                        PERMACT_REMOVE_grp_usr_perm_none,
+                        remove_user(grp_all_noEAR)] 
+                        }
 
 SET_REMOVE_INACTIVE = {
         'ObjSel'    : { 'Criteria' : docORcol},

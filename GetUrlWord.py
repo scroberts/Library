@@ -14,7 +14,7 @@ def get_url_word(outnameroot, htmlfile):
     # https://docs.python.org/2.4/lib/standard-encodings.html
 
     fh=open(htmlfile,'r',encoding='mac_roman').read()
-    dom = BeautifulSoup(fh)
+    dom = BeautifulSoup(fh, "html.parser")
 
     doclist = []
     verlist = []

@@ -45,12 +45,12 @@ def get_bb_prop(s, handle):
 #     print('Status code:', r.status_code) 
     
     # Retrieve the results
-    dom = BeautifulSoup(r.text)
+    dom = BeautifulSoup(r.text, "html.parser")
     title = dom.title.text.strip()
     keywords = dom.keywords.text.strip()
     
     # Have to further process the description
-    dom = BeautifulSoup(dom.description.text)
+    dom = BeautifulSoup(dom.description.text, "html.parser")
     description = ''
     for string in dom.strings:
         description = description.strip() + ' ' + string.strip()
