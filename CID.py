@@ -169,7 +169,7 @@ def gen_ss_cid(s, dl):
     ss = []
     for d in dl:
         ssrow = []
-        print("trying", d)
+        print("\ntrying:", d)
         if 'Document-' in d:
             # CID link is to a document Handle
             doc = DCC.prop_get(s,d,InfoSet = 'DocBasic')
@@ -198,33 +198,38 @@ def gen_ss_cid(s, dl):
             DCC.print_doc_basic(doc)
             DCC.print_ver(prefver)
             DCC.print_locations(doc)
+            print('\n')
             print(doc['handle'], doc['title'], doc['tmtnum'], doc['owner-username'])
-            print("Doc Ref")
+            print("Doc Ref:")
             print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])
             print('Document has %d locations' % len(doc['locations']))
 
         elif 'Version-' in d:
             # CID link is to a version handle
-            ver = DCC.prop_get(s,d,InfoSet = 'VerAll')
-            doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocBasic')
+            verall = DCC.prop_get(s,d,InfoSet = 'VerAll')
+            doc = DCC.prop_get(s,verall['dccdoc'],InfoSet = 'DocBasic')
+            doc['Versions'] = DCC.prop_get(s,verall['dccdoc'],InfoSet = 'Versions')
+            doc['locations'] = DCC.prop_get(s,verall['dccdoc'],InfoSet = 'Parents')
+            
             # Subject Document
             ssrow.append(doc['handle'])
             ssrow.append(doc['title'])
             ssrow.append(doc['tmtnum'])
             ssrow.append(doc['owner-username'])  
             # find info on the preferred version
-            prefver = DCC.prop_get(s,doc['prefver'],InfoSet = 'VerAll')
+            prefver = DCC.prop_get(s,doc['Versions']['prefver'],InfoSet = 'VerAll')
             # Evaluation of current reference          
-            print("CID references Version")
+            print("CID references Version:")
             print(doc['handle'], doc['title'], doc['tmtnum'])
-            print("Referenced Version")
-            print(ver['dccver'], ver['vercomment'], ver['owner-username'], ver['date'])
-            if prefver['dccver'] == ver['dccver']:
+            print("Referenced Version:")
+            print(verall['dccver'], verall['vercomment'], verall['owner-username'], verall['date'])
+            if prefver['dccver'] == verall['dccver']:
                 print("Referenced Version IS the Preferred Version")
                 # Evaluation of current reference
                 ssrow.append('Pref. Ver.') 
-                DCC.print_doc_all(doc)
-                DCC.print_ver(prefver)
+                DCC.print_doc_basic(doc)
+                DCC.print_ver(verall)
+                DCC.print_locations(doc)
                 # Current reference
                 ssrow.append(prefver['dccver'])
                 ssrow.append(prefver['vercomment'])
@@ -234,23 +239,24 @@ def gen_ss_cid(s, dl):
                 print("Referenced Version IS NOT the Preferred Version") 
                 # Evaluation of current reference
                 ssrow.append('Non-Pref. Ver.') 
-                print("Non-Preferred Version")
+                print("Non-Preferred Version:")
                 print(prefver['dccver'], prefver['vercomment'], prefver['owner-username'], prefver['date'])    
-                DCC.print_doc_all(doc)
-                DCC.print_ver(ver)  
+                DCC.print_doc_basic(doc)
+                DCC.print_ver(verall)  
                 DCC.print_ver(prefver) 
+                DCC.print_locations(doc)
                 # Current reference
-                ssrow.append(ver['dccver'])
-                ssrow.append(ver['vercomment'])
-                ssrow.append(ver['owner-username'])
-                ssrow.append(ver['date']) 
+                ssrow.append(verall['dccver'])
+                ssrow.append(verall['vercomment'])
+                ssrow.append(verall['owner-username'])
+                ssrow.append(verall['date']) 
             # Suggested reference
             ssrow.append(prefver['dccver'])
             ssrow.append(prefver['vercomment'])
             ssrow.append(prefver['owner-username'])
             ssrow.append(prefver['date'])           
         else:
-            print("Don't know how to handle", d)
+            print("Don't know how to handle:", d)
             sys.exit()  
         ss.append(ssrow)
     return(ss)
