@@ -13,22 +13,30 @@ def get_url_word(outnameroot, htmlfile):
     # Here is a reference to encoding types used by Python
     # https://docs.python.org/2.4/lib/standard-encodings.html
 
+
+	#opens html file and reads into a beautiful soup object in order to parse
     fh=open(htmlfile,'r',encoding='mac_roman').read()
     dom = BeautifulSoup(fh)
-
+	
+	
+	# creates lists for docs, versions, and combination list
     doclist = []
     verlist = []
     bothlist = []
 
+	# Create regular expressions to recognize elements for documents and versions
     docregex = re.compile(r'Document-\d+')
     verregex = re.compile(r'Version-\d+')
+    # this loop looks for links beginning with "a", such as: "a href" to signify that is it s
+    # hyperlinked item/object
     for link in dom.find_all('a'):
         str = link.get('href')
         if str != None:
             print(str)
-        
+        	# uses regex to search through the lists created
             mo1 = docregex.search(str)
             if mo1 != None:
+            	# When a match is found it then gets printed and appended to the lists
                 docstr = mo1.group()
                 print(docstr)
                 doclist.append(docstr)

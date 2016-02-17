@@ -23,6 +23,7 @@ align_ver_cen_style = Alignment(vertical = 'center')
 align_hv_cen_wrap_style = Alignment(horizontal = 'center', vertical = 'center', wrap_text = True)
 
 
+# Function to set headings in workbook that will be created
 def cid_ss_headings(ws):
     col = 1
     ws.cell(row = 1, column = col).value = "DOC Handle"
@@ -206,6 +207,7 @@ def gen_ss_cid(s, dl):
         elif 'Version-' in d:
             # CID link is to a version handle
             ver = DCC.prop_get(s,d,InfoSet = 'VerAll')
+            # gets doc version using the docBasic call
             doc = DCC.prop_get(s,ver['dccdoc'],InfoSet = 'DocBasic')
             # Subject Document
             ssrow.append(doc['handle'])
@@ -293,7 +295,8 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
     # Get list of DCC documents from a Word file saved as html
     GetUrlWord.get_url_word(dirpath + outroot, dirpath + htmlfile)  
 
-    # Login to DCC
+    # Login to DCC with option to access test VM before any major implementation
+    print(" ")
     prod = ['prod', 'production', 'p', ' ']
     tes = ['test', 'tes', 't']
     checker = False
@@ -312,7 +315,6 @@ def make_cid(dirpath, CID_coll, htmlfile, outroot):
             print("You are now logging into the test VM DocuShare")
             s = DCC.login(Site ='Test')
             checker = True
-        #cf.dcc_url + cf.dcc_login
         #error message alerting user to enter a valid choice
         else:
             print("Please enter a valid choice, (P)roduction or (T)est")

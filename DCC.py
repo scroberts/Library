@@ -249,7 +249,7 @@ def login(url='',**kwargs):
     if debug: print('DCC_URL = ', DCC_URL)    
     return s
     
-def make_collection(s,parentColl, collName, collDesc):
+def make_collection(s,parentColl, collName, collDesc, usrHandle):
     # Create a collection, return the handle
     url = DCC_URL + "/dsweb/MKCOL/" + parentColl
     
@@ -265,9 +265,14 @@ def make_collection(s,parentColl, collName, collDesc):
 #     print('')
 #     print('\n',r.text)
 #     print('\n',r.headers)
-    
-    handle = r.headers['docushare-handle']
-    return(handle)  
+	
+	
+    	handle = r.headers['docushare-handle']
+    	change_owner(s, handle, usrHandle)
+    	# prints information about the new collection with the new owner information
+    	prop_get(s, handle, InfoSet = 'User', Print = True)
+		return(handle)  
+      
     
 def prop_get(s, handle, **kwargs):
     # kwargs options:

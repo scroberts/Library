@@ -370,6 +370,7 @@ def get_discussion_rowcol(url, htmlfile, xlfile, ssrow, sscol):
 
 
 def get_discussion(url, htmlfile, xlfile):
+	#call to another function that will set information in excel speadsheet
     get_discussion_rowcol(url, htmlfile, xlfile, 1, 1)
     
 def test_bulletin_post():
