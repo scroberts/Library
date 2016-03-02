@@ -16,10 +16,15 @@ def get_url_word(outnameroot, htmlfile):
 
 	#opens html file and reads into a beautiful soup object in order to parse
     fh=open(htmlfile,'r',encoding='mac_roman').read()
+<<<<<<< HEAD
     dom = BeautifulSoup(fh)
 	
 	
 	# creates lists for docs, versions, and combination list
+=======
+    dom = BeautifulSoup(fh, "html.parser")
+
+>>>>>>> master
     doclist = []
     verlist = []
     bothlist = []

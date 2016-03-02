@@ -131,7 +131,7 @@ def file_read_collection(coll):
     # Reads collection data from a .html file on disk
     htmlfile = '/Users/sroberts/Box Sync/Python/' + coll + '.html'
     fh=open(CF.dccfilepath + htmlfile,'r',encoding='utf-8').read()
-    dom = BeautifulSoup(fh)
+    dom = BeautifulSoup(fh,"html.parser")
     clist = read_coll_cont(dom)
     return(clist)
 
@@ -251,7 +251,7 @@ def login(url='',**kwargs):
     
 def make_collection(s,parentColl, collName, collDesc, **kwargs):
     # kwargs options:
-    # Usrdata = 'User-': used to signify that the user wants to change the owner of the collection
+    # Usrdata = 'User-XXXXX': used to signify that the user wants to change the owner of the collection
     # Usrdata = '': used to signify that the user does not want to change the owner of the collection
     
     # Create a collection, return the handle
@@ -348,7 +348,7 @@ def prop_get(s, handle, **kwargs):
             r = s.post(url,headers=headers)
         if writeRes:
             FileSys.file_write_props(r, fRoot)
-        dom = BeautifulSoup(r.text)
+        dom = BeautifulSoup(r.text, "html.parser")
         if retDom:
             return(dom)
         if infoSet in infoDic:        
@@ -800,7 +800,7 @@ def set_permissions(s,handle,permdata):
     fd = prop_get(s, handle, InfoSet = 'Perms')
 
 def strip_html(htmltext):
-    dom = BeautifulSoup(htmltext)
+    dom = BeautifulSoup(htmltext, "html.parser")
     return(dom.text)
 
 def test_change_owner():
