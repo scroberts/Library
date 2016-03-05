@@ -9,7 +9,7 @@ import re
 import os
 import json
 import getpass
-import platform
+# import platform
 from bs4 import BeautifulSoup, Tag, NavigableString
 import requests
 from requests.auth import HTTPDigestAuth
@@ -36,7 +36,7 @@ def tracetree_login():
         s.auth = (uname,pword)
     except:
         print("Unable to log in")
-        exit(0)
+        exit(1)
         
     return(s)
 
@@ -53,7 +53,8 @@ def get_docmod_html_files(s, **kwargs):
         res.raise_for_status()
     except:
         print('Unable to get from TraceTree, check login credentials')
-        print('Status code:', res.status_code)
+#         print('Status code:', res.status_code)
+        exit(1)
 
     webfile = open(CF.tracetreefilepath + 'document_module_main.html','wb')
     for chunk in res.iter_content(100000):

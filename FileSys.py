@@ -125,6 +125,7 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     print(indent,'Files in ', collkey, ': ', cinfo['title'])
     colname = cinfo['title']
     colname = colname.replace('/',' ')
+    colname = colname.strip()
     dirpath = dirpath + colname + '/' 
     if savefiles:
         try:
@@ -134,15 +135,21 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
     for doc in doclist:
         finfo = DCC.prop_get(s, doc, InfoSet = 'DocBasic')
         print(indent + '\t',doc)
-        print(indent + '\t\tTitle: ',finfo['title'])
+        title = finfo['title'].strip()
+        print(indent + '\t\tTitle: ', title)
         print(indent + '\t\tFileName: ',finfo['filename'],' [',finfo['date'],']' ,' [', finfo['size'],' bytes ]')
-        filedirpath = dirpath + finfo.get('title').replace('/',' ') + '/'
-        filename = finfo.get('filename')
+        filedirpath = dirpath + title.replace('/',' ') + '/'
+        filename = finfo.get('filename').strip()
         if savefiles:
             try:
                 os.stat(filedirpath)
             except:
-                os.mkdir(filedirpath)
+                try:
+                    os.mkdir(filedirpath)
+                except:
+                    print('Error - could not create directory:', filedirpath)
+                    sys.exit(0)
+                    
         if not os.path.isfile(filedirpath+filename):
             print(indent + "\t\t\tFile doesn't exist")
             if savefiles:
