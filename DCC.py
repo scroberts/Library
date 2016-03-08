@@ -271,13 +271,13 @@ def make_collection(s,parentColl, collName, collDesc, **kwargs):
 #     print('')
 #     print('\n',r.text)
 #     print('\n',r.headers)
-	if usrdata == ''
+    if usrdata == None:
         handle = r.headers['docushare-handle']
         return(handle)
-    elif 'User-' in usrdata
+    elif 'User-' in usrdata:
         handle = r.headers['docushare-handle']
         change_owner(s, handle, usrdata)
-    	return(handle)
+        return(handle)
     
 def prop_get(s, handle, **kwargs):
     # kwargs options:
@@ -914,7 +914,7 @@ def test_keywords():
 
 def test_makecoll():
     s = login(Site = 'Test')
-    make_collection(s, 'Collection-10', 'Python Made Collection', '')
+    make_collection(s, 'Collection-37', 'Python Made Collection', '', Usrdata = 'User-22')
     
 def test_getall():
     s = login(Site = 'Production')    
@@ -933,9 +933,9 @@ if __name__ == '__main__':
 #     test_change_owner()
 #     test_user_group()
 #     test_keywords()
-#     test_makecoll()
+    test_makecoll()
 #     test_getall()
-    test_ampersand()
+#   test_ampersand()
     
 
 
