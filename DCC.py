@@ -264,7 +264,7 @@ def make_collection(s,parentColl, collName, collDesc, **kwargs):
     xml3 = """</description></prop></set></propertyupdate>"""
     xml = xml1 + collName + xml2 + collDesc + xml3   
     
-    ursdata = kwargs.get('Usrdata')
+    usrdata = kwargs.get('Usrdata')
     
     r = s.post(url,data=xml,headers=headers)
     print("make_collection status code:", r.status_code)    
@@ -914,7 +914,7 @@ def test_keywords():
 
 def test_makecoll():
     s = login(Site = 'Test')
-    make_collection(s, 'Collection-37', 'Python Made Collection', '', Usrdata = 'User-22')
+    make_collection(s, 'Collection-37', 'Python Made Collection', '')
     
 def test_getall():
     s = login(Site = 'Production')    
