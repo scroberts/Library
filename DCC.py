@@ -249,7 +249,11 @@ def login(url='',**kwargs):
     if debug: print('DCC_URL = ', DCC_URL)    
     return s
     
-def make_collection(s,parentColl, collName, collDesc):
+def make_collection(s,parentColl, collName, collDesc, **kwargs):
+    # kwargs options:
+    # Usrdata = 'User-XXXXX': used to signify that the user wants to change the owner of the collection
+    # Usrdata = '': used to signify that the user does not want to change the owner of the collection
+    
     # Create a collection, return the handle
     url = DCC_URL + "/dsweb/MKCOL/" + parentColl
     
@@ -260,14 +264,20 @@ def make_collection(s,parentColl, collName, collDesc):
     xml3 = """</description></prop></set></propertyupdate>"""
     xml = xml1 + collName + xml2 + collDesc + xml3   
     
+    usrdata = kwargs.get('Usrdata')
+    
     r = s.post(url,data=xml,headers=headers)
     print("make_collection status code:", r.status_code)    
 #     print('')
 #     print('\n',r.text)
 #     print('\n',r.headers)
-    
-    handle = r.headers['docushare-handle']
-    return(handle)  
+    if usrdata == None:
+        handle = r.headers['docushare-handle']
+        return(handle)
+    elif 'User-' in usrdata:
+        handle = r.headers['docushare-handle']
+        change_owner(s, handle, usrdata)
+        return(handle)
     
 def prop_get(s, handle, **kwargs):
     # kwargs options:
@@ -904,7 +914,7 @@ def test_keywords():
 
 def test_makecoll():
     s = login(Site = 'Test')
-    make_collection(s, 'Collection-10', 'Python Made Collection', '')
+    make_collection(s, 'Collection-37', 'Python Made Collection', '')
     
 def test_getall():
     s = login(Site = 'Production')    
@@ -923,9 +933,9 @@ if __name__ == '__main__':
 #     test_change_owner()
 #     test_user_group()
 #     test_keywords()
-#     test_makecoll()
+    test_makecoll()
 #     test_getall()
-    test_ampersand()
+#   test_ampersand()
     
 
 
