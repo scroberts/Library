@@ -20,6 +20,7 @@ align_hv_cen_style = Alignment(horizontal = 'center', vertical = 'center')
 align_ver_cen_style = Alignment(vertical = 'center')
 align_hv_cen_wrap_style = Alignment(horizontal = 'center', vertical = 'center', wrap_text = True)
 
+#function uses kwarg argument to check a load flag is given.  If a flag is given then the function will load the existing file. It gives the option to load from the disk or recreate the json file
 def return_tree(s, target, rootfilename, **kwargs):
     load_flag = kwargs.get('Load')
         
@@ -48,6 +49,7 @@ def flat_tree(tree, key, list):
         flat_tree(tree, col, list)
     return(list)   
 
+#function that iterates through the tree and prints document information
 def iter_print_tree(s, tree, key, indent):
     branch = tree[key]
     for doc in branch['documents']:
@@ -67,10 +69,10 @@ def iter_print_tree(s, tree, key, indent):
         print(indent+col, ':', nameData['title'])
         print(indent+'    URL: ','https://docushare.tmt.org/docushare/dsweb/ServicesLib/',col,sep='')        
         iter_print_tree(s, tree, col, indent+'    ')
-        
+# This function calls the iterative version of print tree
 def print_tree(s,tree):
     iter_print_tree(s, tree, 'root', '')
-    
+# creates a hyperlink using the url given in arguments
 def href_str(name, url):
     return('<a href="'+url+'">'+name+'</a>')
     
@@ -89,7 +91,7 @@ def url_ver(handle):
 def url_loc(handle):
     return('https://docushare.tmt.org/docushare/dsweb/ServicesLib/' + handle + '/Location')
 
-
+# function that iterates through html tree
 def iter_html_tree(s, htmlfile, tree, key, indent, **kwargs):
     branch = tree[key]
     
@@ -168,7 +170,7 @@ def html_tree(s,tree,froot,**kwargs):
     
     print('</body></html>',file = htmlfile)  
     htmlfile.close
-
+# function sets excel workbook headings for html tree
 def xls_tree_headings(ws):
     col = 1
     ws.cell(row = 1, column = col).value = "ID"
@@ -190,12 +192,12 @@ def xls_tree_headings(ws):
     ws.cell(row = 1, column = col).value = "Date Modified"
     
     colcnt = col+1
-    
+    # sets alignment and font style for headings
     for col in range(1, colcnt):
         ws.cell(row = 1, column = col).alignment = align_hv_cen_wrap_style
         ws.cell(row = 1, column = col).font = bold_style
 
-
+# Prints data to xls document
 def xls_print_ssrow(ws, collData, docData, ssrow):
     col = 1
     
@@ -256,6 +258,7 @@ def xls_print_ssrow(ws, collData, docData, ssrow):
 # Global Variable ssrow
 ssrow = 2
 
+#iterates through xls version of html tree
 def xls_tree_iter(s,ws,tree,col, **kwargs):
     global ssrow
     # Write and format the headings in Excel
@@ -285,6 +288,8 @@ def xls_tree(s,tree,col,fname, **kwargs):
     
     wb.save(CF.reportfilepath + fname + '.xls')   
 
+# Funciton builds html tree and uses prop_get to get information of the target collection
+# Uses kwarg argument to recognize exclude list
 def build_tree(s, keyname, target, tree, **kwargs):
     # kwargs options:
     #  Exclude - List of handles to not be included in the tree
