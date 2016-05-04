@@ -18,7 +18,7 @@ import Tree
 import FileSys
 
 # Global Variables
-debug = False
+debug = True
 DCC_URL = ''
 
 # References for DCC login
@@ -191,9 +191,11 @@ def login(url='',**kwargs):
     
     global DCC_URL
     
+    site = kwargs.get('Site') 
+    
     if not url:
         if debug: print('Login: Url argument not supplied')
-        site = kwargs.get('Site') 
+
         if site == 'Production':
             print('\nLogging in to DCC ***Production*** Site')
             DCC_URL = CF.dcc_url
