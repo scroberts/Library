@@ -18,7 +18,7 @@ import Tree
 import FileSys
 
 # Global Variables
-debug = True
+debug = False
 DCC_URL = ''
 
 # References for DCC login
