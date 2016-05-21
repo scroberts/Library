@@ -170,6 +170,7 @@ def html_tree(s,tree,froot,**kwargs):
     
     print('</body></html>',file = htmlfile)  
     htmlfile.close
+    
 # function sets excel workbook headings for html tree
 def xls_tree_headings(ws):
     col = 1
@@ -181,6 +182,8 @@ def xls_tree_headings(ws):
     col += 1
     ws.cell(row = 1, column = col).value = "Document Title"
     col += 1
+    ws.cell(row = 1, column = col).value = "TMT Doc Number"
+    col += 1    
     ws.cell(row = 1, column = col).value = "Document Handle"
     col += 1    
     ws.cell(row = 1, column = col).value = "Version Handle"   
@@ -196,6 +199,18 @@ def xls_tree_headings(ws):
     for col in range(1, colcnt):
         ws.cell(row = 1, column = col).alignment = align_hv_cen_wrap_style
         ws.cell(row = 1, column = col).font = bold_style
+        
+    # Set column widths
+    ws.column_dimensions["A"].width = 5.0
+    ws.column_dimensions["B"].width = 15.0
+    ws.column_dimensions["C"].width = 25.0
+    ws.column_dimensions["D"].width = 60.0
+    ws.column_dimensions["E"].width = 25.0
+    ws.column_dimensions["F"].width = 15.0    
+    ws.column_dimensions["G"].width = 15.0
+    ws.column_dimensions["H"].width = 20.0
+    ws.column_dimensions["I"].width = 60.0
+    ws.column_dimensions["J"].width = 35.0
 
 # Prints data to xls document
 def xls_print_ssrow(ws, collData, docData, ssrow):
@@ -226,32 +241,37 @@ def xls_print_ssrow(ws, collData, docData, ssrow):
     ws.cell(row = ssrow, column = col).hyperlink = url_access(docData['handle'])
     ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
     col += 1   
+
+    # Column 5: TMT Document Number
+    ws.cell(row = ssrow, column = col).value = docData['tmtnum']
+    ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
+    col += 1  
     
-    # Column 5: Doc Handle
+    # Column 6: Doc Handle
     ws.cell(row = ssrow, column = col).value = docData['handle']
     ws.cell(row = ssrow, column = col).font = font_url_style
     ws.cell(row = ssrow, column = col).hyperlink = url_view(docData['handle'])
     ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
     col += 1  
     
-    # Column 6: Ver Handle
+    # Column 7: Ver Handle
     ws.cell(row = ssrow, column = col).value = docData['Versions']['prefver']
     ws.cell(row = ssrow, column = col).font = font_url_style
     ws.cell(row = ssrow, column = col).hyperlink = url_view(docData['Versions']['prefver'])
     ws.cell(row = ssrow, column = col).alignment = Alignment(vertical = 'center')
     col += 1   
 
-    # Column 7: Owner
+    # Column 8: Owner
     ws.cell(row = ssrow, column = col).value = docData['owner-name']
     ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
     col += 1   
 
-    # Column 8: File Name
+    # Column 9: File Name
     ws.cell(row = ssrow, column = col).value = docData['filename']
     ws.cell(row = ssrow, column = col).alignment = Alignment(wrap_text = True, vertical = 'center')
     col += 1   
     
-    # Column 9: Date Modified
+    # Column 10: Date Modified
     ws.cell(row = ssrow, column = col).value = docData['date']
     ws.cell(row = ssrow, column = col).alignment = align_hv_cen_style
 
