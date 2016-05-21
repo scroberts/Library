@@ -585,6 +585,7 @@ def read_doc_basic_data(dom):
     fd['title'] = strip_html(str)
     fd['handle'] = get_handle(dom.handle.dsref['handle'])
     fd['tmtnum'] = dom.summary.text
+    fd['summary'] = dom.summary.text
     fd['filename'] = dom.document.text
     fd['date'] = dom.getlastmodified.text
     fd['owner-name'] = dom.entityowner.displayname.text
@@ -601,7 +602,7 @@ def read_doc_data(dom):
     fd['title'] = strip_html(dom.displayname.text)
     fd['handle'] = get_handle(dom.href.text)
     fd['tmtnum'] = dom.summary.text
-
+    fd['summary'] = dom.summary.text
     fd['filename'] = dom.webdav_title.text
     fd['owner-name'] = dom.entityowner.displayname.text
     fd['owner-username'] = dom.entityowner.username.text
