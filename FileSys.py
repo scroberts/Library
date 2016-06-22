@@ -140,40 +140,43 @@ def traverse(s, tr, collkey, dirpath = './', indent = '', **kwargs):
         print(indent + '\t\tFileName: ',finfo['filename'],' [',finfo['date'],']' ,' [', finfo['size'],' bytes ]')
         filedirpath = dirpath + title.replace('/',' ') + '/'
         filename = finfo.get('filename').strip()
-        if savefiles:
-            try:
-                os.stat(filedirpath)
-            except:
-                try:
-                    os.mkdir(filedirpath)
-                except:
-                    print('Error - could not create directory:', filedirpath)
-                    sys.exit(0)
-                    
-        if not os.path.isfile(filedirpath+filename):
-            print(indent + "\t\t\tFile doesn't exist")
-            if savefiles:
-                if finfo['size'] < maxfilesize:
-                    print(indent + "\t\t\tGetting file")
-                    DCC.file_download(s, doc, filedirpath, finfo['filename'])
-                else:
-                    print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
-            else:
-                print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
-
-
-        elif (datetime.strptime(finfo['date'],'%a, %d %b %Y %H:%M:%S %Z') - datetime(1970,1,1)).total_seconds() > os.path.getctime(filedirpath+filename):
-            print(indent + "\t\t\tFile exists, but is out of date:", time.ctime(os.path.getctime(filedirpath+filename)))
-            if savefiles:
-                if finfo['size'] < maxfilesize:
-                    print(indent + "\t\t\tGetting updated file")
-                    DCC.file_download(s, doc, filedirpath, finfo['filename'])
-                else:
-                    print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
-            else:
-                print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
+        if doc in exclude:
+        	print(indent + "\t\t\tFile is flagged to be excluded, will not download")
         else:
-            print(indent + "\t\t\tFile exists, created:", time.ctime(os.path.getctime(filedirpath+filename)))
+            if savefiles:
+                try:
+                    os.stat(filedirpath)
+                except:
+                    try:
+                        os.mkdir(filedirpath)
+                    except:
+                        print('Error - could not create directory:', filedirpath)
+                        sys.exit(0)
+                
+            if not os.path.isfile(filedirpath+filename):
+                print(indent + "\t\t\tFile doesn't exist")
+                if savefiles:
+                    if finfo['size'] < maxfilesize:
+                        print(indent + "\t\t\tGetting file")
+                        DCC.file_download(s, doc, filedirpath, finfo['filename'])
+                    else:
+                        print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
+                else:
+                    print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
+
+
+            elif (datetime.strptime(finfo['date'],'%a, %d %b %Y %H:%M:%S %Z') - datetime(1970,1,1)).total_seconds() > os.path.getctime(filedirpath+filename):
+                print(indent + "\t\t\tFile exists, but is out of date:", time.ctime(os.path.getctime(filedirpath+filename)))
+                if savefiles:
+                    if finfo['size'] < maxfilesize:
+                        print(indent + "\t\t\tGetting updated file")
+                        DCC.file_download(s, doc, filedirpath, finfo['filename'])
+                    else:
+                        print(indent + "\t\t\tFile size exceeds MaxFileSize of ", maxfilesize, "bytes")
+                else:
+                    print(indent + "\t\t\tSaveFiles is False, so file will not be downloaded")
+            else:
+                print(indent + "\t\t\tFile exists, created:", time.ctime(os.path.getctime(filedirpath+filename)))
 
     for c in collist:
         if (not c == collkey) and (not c in exclude):
@@ -186,7 +189,7 @@ def create_DCC_mirror(s, dcc_handle, dirpath, **kwargs):
     traverse(s, tr, tr['root']['collections'][0], dirpath, **kwargs)
     
             
-def testTraverse():        
+def testTraverse():
     # Login to DCC
     s = DCC.login(CF.dcc_url + CF.dcc_login)
 
